@@ -1,0 +1,23 @@
+# Created by .ignore support plugin (hsz.mobi)
+### Java template
+*.class
+
+# Log file
+*.log
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+### JetBrains template
+ */out/
+ .gitignore
+ .idea/
+ */target/
+ # 二级目录的.iml文件
+ */*.iml
