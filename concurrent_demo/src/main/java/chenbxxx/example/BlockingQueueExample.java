@@ -1,4 +1,4 @@
-package chenbxxx;
+package chenbxxx.example;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -11,7 +11,5 @@ import java.util.concurrent.BlockingQueue;
 public class BlockingQueueExample {
     public BlockingQueueExample(){
         BlockingQueue<Integer> blockingQueue = new ArrayBlockingQueue<Integer>(10);
-        new Thread(new Producer(blockingQueue)).start();
-        new Thread(new Consumer(blockingQueue)).start();
     }
 }

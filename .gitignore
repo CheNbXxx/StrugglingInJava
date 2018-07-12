@@ -77,7 +77,7 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
-ssm_demo/target/
 ssm_demo/*.iml
+*/target/
 concurrent_demo/*.iml
-concurrent_demo/target/
+.idea/
