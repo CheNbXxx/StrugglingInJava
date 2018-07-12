@@ -6,10 +6,12 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="concurrent_demo" />
         <module name="ssm_demo" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="concurrent_demo" target="8" />
       <module name="ssm_demo" target="8" />
     </bytecodeTargetLevel>
   </component>
