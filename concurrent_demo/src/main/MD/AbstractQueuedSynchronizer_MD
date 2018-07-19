@@ -146,10 +146,10 @@
       *  如果其中被中断则返回true
       */
     final boolean acquireQueued(final Node node, int arg) {
-            // 失败表示
+            // 失败标识
             boolean failed = true;
             try {
-                // 是否终端标志
+                // 是否中断标志
                 boolean interrupted = false;
                 for (;;) { // 无限循环
                     // 获取前驱节点
@@ -167,7 +167,7 @@
                         parkAndCheckInterrupt())
                         interrupted = true;
                 }
-            } finally {
+            } finally {     // 当前驱节点为空时会抛出NPE
                 if (failed)
                     cancelAcquire(node);
             }
@@ -292,9 +292,10 @@
                 for (;;) {      // 无限循环,确保进入队列
                     // 获得前驱节点,为空抛NPE
                     final Node p = node.predecessor();
-                    if (p == head) {
+                    if (p == head) {    // 如果node的前驱节点是head,node处于第二则有机会获得资源
+                        // 尝试获取资源
                         int r = tryAcquireShared(arg);
-                        if (r >= 0) {
+                        if (r >= 0) {   // 正数代表资源还有剩余
                             setHeadAndPropagate(node, r);
                             p.next = null; // help GC
                             if (interrupted)
@@ -312,8 +313,35 @@
                     cancelAcquire(node);
             }
         }
+        /**
+          *    设置头节点并唤醒可以共享的线程
+          */
+         private void setHeadAndPropagate(Node node, int propagate) {
+                Node h = head; // Record old head for check below
+                setHead(node);   
+                // 操作太骚 我看不懂
+                if (propagate > 0 || h == null || h.waitStatus < 0 ||
+                    (h = head) == null || h.waitStatus < 0) {
+                    Node s = node.next;
+                    if (s == null || s.isShared())
+                        doReleaseShared();
+                }
+            }
 ```
+
+4. 其实共享形式和独占形式在代码上大同小异,在共享形式的获取锁完成之后会尝试唤醒别的线程，主要还是四个线程状态。
+> 线程状态
+> | 状态 | 含义 | 数值 |
+> | --  | -- | -- |
+> | CANCELLED | 等待队列中的线程被中断或者超时,会变为取消状态 | 1 |
+> | SIGNAL    | 表示该节点的后继节点等待唤醒，在完成该节点后会唤醒后继节点|-1|
+> |
+> |
+
+
+- - - 
 #### AbstractOwnableSynchonizer
+
 ```java 
  /**
    * A synchronizer that may be exclusively owned by a thread.  a
