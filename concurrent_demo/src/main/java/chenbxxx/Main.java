@@ -2,6 +2,14 @@ package chenbxxx;
 
 
 import java.security.PrivateKey;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,11 +34,22 @@ public class Main {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        Lock lock = new ReentrantLock();
-        MyThread t1 = new MyThread("t1", lock);
-        MyThread t2 = new MyThread("t2", lock);
-        t1.start();
-        t2.start();
+//        show(Arrays.asList(1,2,3,4,5,5))
+// ;
+        // 接单时间
+        LocalDateTime checkTime = LocalDateTime.now().minusMinutes(11).minusSeconds(20);
+        // 当前时间
+        LocalDateTime srcTime = LocalDateTime.now();
+
+        System.out.println(srcTime.until(checkTime,ChronoUnit.SECONDS));
+        Duration duration = Duration.between(checkTime, srcTime);
+        Long minutes = duration.toMinutes();
+        System.out.println(minutes);
+    }
+    private static void show(List<Integer> ints){
+        for (Integer i : ints){
+            System.out.println(i);
+        }
     }
 }
 class MyThread extends Thread {
