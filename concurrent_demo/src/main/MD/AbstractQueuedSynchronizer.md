@@ -1,11 +1,17 @@
 #### AbstractQueuedSynchronizer
-* 提供了一个基于FIFO队列的，可以用于构造锁和基本同步器的基础框架
+* 提供了一个非阻塞的FIFO队列（在操作插入或删除元素时，并发条件下不会阻塞，而是通过自旋锁和CAS保证操作的原子性），可以用于构造锁和基本同步器的基础框架，是JUC中几乎所有锁的基础。
+* 底层中通过`head`和`tail`维护一个以内部类`Node`为元素的类LCH队列
+* 对上层实现提供了几种必要需求
+    1. 独占锁和共享锁两种机制
+    2. 线程阻塞后，支持中断。
+    3. 支持阻塞并超时后中断的机制
 
 * 成员变量
 ```java
          private transient volatile Node head;     // 底层FIFO队列的头节点
          private transient volatile Node tail;     // 尾节点
-         private volatile int state;               // 当前同步器状态
+         private volatile int state;               // 当前同步器状态，通过CAS和volatile保证其原子性和可见性
+         // RetrantLock可以将这个state用于存储当前线程的重进入次数，Semaphore可以用这个state存储许可数，CountDownLatch则可以存储需要被countDown的次数，而Future则可以存储当前任务的执行状态(RUNING,RAN,CANCELL)
 ```
 
 * 成员内部类 Node
