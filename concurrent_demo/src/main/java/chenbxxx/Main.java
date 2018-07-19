@@ -2,6 +2,8 @@ package chenbxxx;
 
 
 import java.security.PrivateKey;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,11 +28,15 @@ public class Main {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        Lock lock = new ReentrantLock();
-        MyThread t1 = new MyThread("t1", lock);
-        MyThread t2 = new MyThread("t2", lock);
-        t1.start();
-        t2.start();
+//        Lock lock = new ReentrantLock();
+//        MyThread t1 = new MyThread("t1", lock);
+//        MyThread t2 = new MyThread("t2", lock);
+//        t1.start();
+//        t2.start();
+        LocalDateTime localDateTime = LocalDateTime.now();
+        LocalDateTime localDateTime1 = LocalDateTime.now().minusMinutes(10);
+        Duration duration = Duration.between(localDateTime,localDateTime1);
+        System.out.println(duration.toMinutes());
     }
 }
 class MyThread extends Thread {
