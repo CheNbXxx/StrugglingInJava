@@ -9,5 +9,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ReentrantLockExample {
     public static void main(String[] args) {
+        // 默认为非公平锁
+        ReentrantLock lock = new ReentrantLock();
+        lock.lock();
     }
 }
