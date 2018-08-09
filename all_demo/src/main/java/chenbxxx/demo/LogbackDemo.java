@@ -1,4 +1,4 @@
-package chenbxxx;
+package chenbxxx.demo;
 
 import lombok.extern.slf4j.Slf4j;
 
