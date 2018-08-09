@@ -6,14 +6,14 @@ package chenbxxx.example;
  * @date 2018/7/23
  */
 public class YieldExample {
-    int i = 0;
+    private static int i = 0;
     public static void main(String[] args) {
         YieldExample yieldExample = new YieldExample();
         new Thread(new MyRunnable(yieldExample)).start();
         new Thread(new MyRunnable(yieldExample)).start();
     }
 
-    public synchronized void show(){
+    synchronized void show(){
         System.out.println(Thread.currentThread().getName() + " is running,i="+ ++i);
     }
 }
@@ -23,7 +23,7 @@ class MyRunnable implements Runnable{
     private YieldExample yieldExample;
 
 
-    public MyRunnable(YieldExample yieldExample) {
+    MyRunnable(YieldExample yieldExample) {
         this.yieldExample = yieldExample;
     }
 
