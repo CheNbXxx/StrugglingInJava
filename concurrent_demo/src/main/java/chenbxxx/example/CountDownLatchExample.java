@@ -2,6 +2,7 @@ package chenbxxx.example;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -16,43 +17,95 @@ import java.util.concurrent.CountDownLatch;
  */
 @Slf4j
 public class CountDownLatchExample {
-    /** 初始化资源为10 */
-    private static int RESOURCE = 10;
+    private static final int THREAD_SIZE = 4;
 
     /** 共用的计数器 */
-    private static final CountDownLatch COUNT_DOWN_LATCH = new CountDownLatch(5);
+    private static CountDownLatch countDownLatch = new CountDownLatch(THREAD_SIZE);
 
-    private class Producer implements Runnable{
-        private CountDownLatch countDownLatch;
+    /** 随机 */
+    private static Random random = new Random(10);
 
-        public Producer(CountDownLatch countDownLatch) {
+    private abstract class MyRunnable implements Runnable{
+
+        /** 线程名 */
+        String threadName;
+
+        /** 计数器 */
+        CountDownLatch countDownLatch;
+
+        /** 任务所需时间 */
+        long needTime ;
+
+        MyRunnable(String threadName, CountDownLatch countDownLatch,long needTime) {
+            this.threadName = threadName;
             this.countDownLatch = countDownLatch;
+            this.needTime = needTime;
         }
+    }
 
+    /**
+     * 子任务(准备任务的基础线程)
+     */
+    private class Subtasks extends MyRunnable {
+        private Subtasks(String threadName,CountDownLatch countDownLatch,long needTime) {
+            super(threadName,countDownLatch,needTime);
+        }
         @Override
         public void run() {
             try {
-                log.info("{}已经阻塞",Thread.currentThread().getName());
-                countDownLatch.await();
-                log.info("继续运行");
+                Thread.sleep(needTime);
+                log.info("{}准备工作完成",threadName);
+                countDownLatch.countDown();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public void main() throws InterruptedException {
-        for (int i = 0; i < 2 ; i++){
-            new Thread(new Producer(COUNT_DOWN_LATCH)).start();
+    /**
+     * 主任务线程
+     */
+    private class Maintasks extends MyRunnable{
+
+        private CountDownLatch myCountDownLatch;
+
+        Maintasks(String threadName, CountDownLatch countDownLatch, long needTime,CountDownLatch myCountDownLatch) {
+            super(threadName, countDownLatch, needTime);
+            this.myCountDownLatch = myCountDownLatch;
         }
 
-        Thread.sleep(2000);
+        @Override
+        public void run() {
+            try {
+                log.info("{}主任务正在等待",threadName);
+                countDownLatch.await();
+                log.info("{}主任务开始执行",threadName);
+                Thread.sleep(needTime);
+                log.info("{}主任务执行完成",threadName);
+                myCountDownLatch.countDown();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
-        COUNT_DOWN_LATCH.countDown();
+    private void main() throws InterruptedException {
+        log.info("|*************  Starting  *************|");
+        for (long i = 0; i < THREAD_SIZE;i++){
+            new Thread(new Subtasks(i+"号",countDownLatch,random.nextInt(1000))).start();
+        }
+
+        CountDownLatch countDownLatch1 = new CountDownLatch(2);
+
+        for (int i = 0;i < 2;i++){
+            new Thread(new Maintasks(i+"号",countDownLatch,random.nextInt(1000),countDownLatch1)).start();
+        }
+
+        countDownLatch1.await();
+        log.info("|************** Ending *************|");
     }
 
     public static void main(String[] args) throws InterruptedException {
        new CountDownLatchExample().main();
     }
-
 }
