@@ -1,4 +1,4 @@
-# Java-demos
+# StrugglingInJava
 个人Java学习demo，笔记在wiki(〃'▽'〃)
 - - -
 a newbie's struggle（づ￣3￣）づ╭❤～
