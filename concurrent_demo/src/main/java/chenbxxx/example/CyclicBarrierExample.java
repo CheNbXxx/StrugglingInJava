@@ -17,35 +17,37 @@ public class CyclicBarrierExample {
 
     public static void main(String[] args) {
         CyclicBarrier cyclicBarrier = new CyclicBarrier(3, () -> System.out.println("比赛开始!"));
-        for (int i = 0;i < PLAYER_NUMBER; i++){
+        for (int i = 0; i < PLAYER_NUMBER; i++) {
             executorService.submit(new Player(String.valueOf(i), cyclicBarrier, reentrantLock));
         }
     }
 
-}
-class Player implements Runnable{
+    static class Player implements Runnable {
 
-    private String threadName;
+        private String threadName;
 
-    private CyclicBarrier cyclicBarrier;
+        private CyclicBarrier cyclicBarrier;
 
-    private ReentrantLock lock;
+        private ReentrantLock lock;
 
-    public Player(String threadName,CyclicBarrier cyclicBarrier,ReentrantLock lock) {
-        this.cyclicBarrier = cyclicBarrier;
-        this.threadName = threadName;
-        this.lock = lock;
-    }
+        public Player(String threadName, CyclicBarrier cyclicBarrier, ReentrantLock lock) {
+            this.cyclicBarrier = cyclicBarrier;
+            this.threadName = threadName;
+            this.lock = lock;
+        }
 
-    @Override
-    public void run() {
-        try {
-            System.out.println(threadName + "号球员"+threadName+"到达赛场");
-            Thread.sleep(1000);
-            cyclicBarrier.await();
-            System.out.println("正在球场");
-        } catch (InterruptedException | BrokenBarrierException e) {
-            e.printStackTrace();
+        @Override
+        public void run() {
+            try {
+                System.out.println(threadName + "号球员" + threadName + "到达赛场");
+                Thread.sleep(1000);
+                cyclicBarrier.await();
+                System.out.println("正在球场");
+            } catch (InterruptedException | BrokenBarrierException e) {
+                e.printStackTrace();
+            }
         }
     }
+
 }
+

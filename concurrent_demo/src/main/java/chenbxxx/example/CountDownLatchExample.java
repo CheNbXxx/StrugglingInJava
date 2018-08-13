@@ -5,24 +5,32 @@ import java.util.concurrent.CountDownLatch;
 /**
  * @author chenbxxx
  * @email ai654778@vip.qq.com
- * @date 2018/7/30
+ * @date 2018/8/10
+ * @link https://github.com/CheNbXxx/java-demos/wiki/CountDownLatch
+ *
+ * CountDownLatch的example类
+ * 相比于CycliBarrier来说，
+ *     CountDownLatch更多的倾向于主从关系，一个主线程等待多个从属线程完成后再执行。
  */
 public class CountDownLatchExample {
-    private static CountDownLatch countDownLatch = new CountDownLatch(10);
-//    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    /** 初始化资源为10 */
+    private static int RESOURCE = 10;
 
+    /** 共用的计数器 */
+    private static final CountDownLatch COUNT_DOWN_LATCH = new CountDownLatch(10);
 
-    public static void main(String[] args) {
-//        System.out.println(new Random().nextInt(100000,1000000));
+    private class Producer implements Runnable{
 
+        private CountDownLatch countDownLatch;
+
+        public Producer(CountDownLatch countDownLatch) {
+            this.countDownLatch = countDownLatch;
+        }
+
+        @Override
+        public void run() {
+
+        }
     }
-}
-class CDLRunnable implements Runnable{
 
-    private CountDownLatch countDownLatch;
-
-    @Override
-    public void run() {
-
-    }
 }
