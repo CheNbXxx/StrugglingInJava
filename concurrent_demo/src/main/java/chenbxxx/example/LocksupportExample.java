@@ -1,6 +1,5 @@
 package chenbxxx.example;
 
-import javax.management.relation.RoleUnresolved;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.LockSupport;
 

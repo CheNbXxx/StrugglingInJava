@@ -55,9 +55,10 @@ public class CountDownLatchExample {
             try {
                 Thread.sleep(needTime);
                 log.info("{}准备工作完成",threadName);
-                countDownLatch.countDown();
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            }finally {
+                countDownLatch.countDown();
             }
         }
     }
@@ -81,10 +82,11 @@ public class CountDownLatchExample {
                 countDownLatch.await();
                 log.info("{}主任务开始执行",threadName);
                 Thread.sleep(needTime);
-                log.info("{}主任务执行完成",threadName);
-                myCountDownLatch.countDown();
+                log.info("经过{}s，{}主任务执行完成",needTime,threadName);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            }finally {
+                myCountDownLatch.countDown();
             }
         }
     }
@@ -92,13 +94,13 @@ public class CountDownLatchExample {
     private void main() throws InterruptedException {
         log.info("|*************  Starting  *************|");
         for (long i = 0; i < THREAD_SIZE;i++){
-            new Thread(new Subtasks(i+"号",countDownLatch,random.nextInt(1000))).start();
+            new Thread(new Subtasks(i+"号",countDownLatch,random.nextInt(10000))).start();
         }
 
         CountDownLatch countDownLatch1 = new CountDownLatch(2);
 
         for (int i = 0;i < 2;i++){
-            new Thread(new Maintasks(i+"号",countDownLatch,random.nextInt(1000),countDownLatch1)).start();
+            new Thread(new Maintasks(i+"号",countDownLatch,random.nextInt(10000),countDownLatch1)).start();
         }
 
         countDownLatch1.await();
