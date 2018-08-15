@@ -82,7 +82,7 @@ public class CountDownLatchExample {
                 countDownLatch.await();
                 log.info("{}主任务开始执行",threadName);
                 Thread.sleep(needTime);
-                log.info("经过{}s，{}主任务执行完成",needTime,threadName);
+                log.info("经过{}ms，{}主任务执行完成",needTime,threadName);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }finally {
@@ -107,7 +107,28 @@ public class CountDownLatchExample {
         log.info("|************** Ending *************|");
     }
 
+
+    /**
+     * 在5000ms之后调用countDown方法
+     * @param countDownLatch
+     * @throws InterruptedException
+     */
+    private void debugDemo(CountDownLatch countDownLatch) throws InterruptedException {
+        Thread.sleep(5000);
+        countDownLatch.countDown();
+    }
+
     public static void main(String[] args) throws InterruptedException {
-       new CountDownLatchExample().main();
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        new Thread(() -> {
+            try {
+                new CountDownLatchExample().debugDemo(countDownLatch);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        log.info("主线程开始等待");
+        countDownLatch.await();
+        log.info("ENDING");
     }
 }
