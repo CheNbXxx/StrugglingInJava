@@ -18,6 +18,7 @@ import java.util.Date;
  * ZonedDateTime（带有区域信息的日期时间，比如中国默认使用的是东八区）
  * Period（如两个日期之间相差的年、月、天数）
  * Druation（两个日期时间之间间隔的秒和纳秒）
+ * ChronoUnit（计算各种单位的时间）
  */
 
 public class TimeUtil {
@@ -39,7 +40,14 @@ public class TimeUtil {
     public static Date dateLocalTime2Date(LocalDateTime localDateTime){
         return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
-
+    /**
+     * date -> localDate
+     * @param date  date对象
+     * @return
+     */
+    public static LocalDate date2LocalDate(Date date){
+        return LocalDateTime.ofInstant(date.toInstant(),ZoneId.systemDefault()).toLocalDate();
+    }
 
 
     /**
