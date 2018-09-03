@@ -1,4 +1,4 @@
-package chenbxxx.example;
+package chenbxxx.demo.concurrent;
 
 /**
  * @author chenbxxx
