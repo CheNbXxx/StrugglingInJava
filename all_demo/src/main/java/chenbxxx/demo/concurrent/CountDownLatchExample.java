@@ -93,16 +93,14 @@ public class CountDownLatchExample {
 
     private void main() throws InterruptedException {
         log.info("|*************  Starting  *************|");
+        log.info("共有{}个子线程,{}个主线程",THREAD_SIZE,2);
         for (long i = 0; i < THREAD_SIZE;i++){
             new Thread(new Subtasks(i+"号",countDownLatch,random.nextInt(10000))).start();
         }
-
         CountDownLatch countDownLatch1 = new CountDownLatch(2);
-
         for (int i = 0;i < 2;i++){
             new Thread(new Maintasks(i+"号",countDownLatch,random.nextInt(10000),countDownLatch1)).start();
         }
-
         countDownLatch1.await();
         log.info("|************** Ending *************|");
     }
@@ -115,6 +113,7 @@ public class CountDownLatchExample {
      */
     private void debugDemo(CountDownLatch countDownLatch) throws InterruptedException {
         Thread.sleep(5000);
+        log.info("唤醒主线程");
         countDownLatch.countDown();
     }
 
@@ -130,5 +129,8 @@ public class CountDownLatchExample {
         log.info("主线程开始等待");
         countDownLatch.await();
         log.info("ENDING");
+
+
+        new CountDownLatchExample().main();
     }
 }

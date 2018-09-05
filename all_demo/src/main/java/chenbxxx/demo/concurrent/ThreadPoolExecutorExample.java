@@ -37,15 +37,24 @@ public class ThreadPoolExecutorExample {
      */
     ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
     public static void main(String[] args) {
+        /**
+         * `SynchronousQueue`该阻塞队列不会保留任何线程,接收到任务之后就交给线程处理,池中无可用线程就创建.
+         *      `maximumPoolSize`通常为`Integer.MAX_VALUE`.
+         */
         SynchronousQueue<Runnable> synchronousQueue = new SynchronousQueue<>();
-        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10, 100,
+
+        /**
+         * `LinkedBlockingQueue`在接收到任务时,活动线程小于`corePoolSize`则创建执行线程,否则无限存储.
+         *      `maximumPoolSize`失效
+         */
+        LinkedBlockingQueue linkedBlockingQueue = new LinkedBlockingQueue();
+
+        /**
+         *  `ArrayBlockQueue`该线程可以指定等待队列的容量,接收到任务时,活动线程小于`corePoolSize`则创建并执行,等于则入队列,队列满则抛错.
+         */
+        ArrayBlockingQueue arrayBlockingQueue = new ArrayBlockingQueue(10);
+
+       ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10, 100,
                 20, TimeUnit.MINUTES, synchronousQueue, r -> new Thread("TestThread"+r));
-
-
-
-
-        for(int i = 0 ; i < 100 ; i++){
-
-        }
     }
 }
