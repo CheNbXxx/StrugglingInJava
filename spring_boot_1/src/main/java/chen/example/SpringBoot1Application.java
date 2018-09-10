@@ -1,9 +1,15 @@
-package chen.example.spring_boot_1;
+package chen.example;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * SpringBoot的快速启动类
+ * @author chenbxxx
+ */
 @SpringBootApplication
+@MapperScan(basePackages = "chen.example.mapper")
 public class SpringBoot1Application {
 
     public static void main(String[] args) {

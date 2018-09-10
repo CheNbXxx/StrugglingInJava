@@ -38,7 +38,7 @@
     <!--</plugins>-->
     <!--
         实体类配置文件映射
-        在spring-dao.xml中直接配置全部.xml文件
+        在spring-mapper.xml中直接配置全部.xml文件
      -->
     <mappers>
         <mapper resource="chenbxxx/mapper/UserMapper.xml"/>
