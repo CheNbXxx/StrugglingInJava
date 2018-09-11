@@ -9,5 +9,6 @@ import java.lang.annotation.*;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
+@MyVerify
 public @interface NotNull{
 }
