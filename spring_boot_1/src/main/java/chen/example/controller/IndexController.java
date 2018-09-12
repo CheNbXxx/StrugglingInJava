@@ -23,7 +23,7 @@ public class IndexController {
 
     @GetMapping("test")
     @MyVerify
-    protected Map<Integer,Object> test(@RequestParam("param1") String param1,@RequestParam("param2") String param2){
+    public Map<Integer,Object> test(@RequestParam("param1") String param1,@RequestParam(value = "param2",required = false) String param2){
         Map<Integer, Object> returnValue =new HashMap(1);
         returnValue.put(1,"success");
         log.info("Get into test");

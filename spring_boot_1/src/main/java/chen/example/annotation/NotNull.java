@@ -11,4 +11,6 @@ import java.lang.annotation.*;
 @Target(ElementType.PARAMETER)
 @MyVerify
 public @interface NotNull{
+
+    String message() default "param is null";
 }

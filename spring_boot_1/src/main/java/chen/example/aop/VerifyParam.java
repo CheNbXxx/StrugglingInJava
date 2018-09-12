@@ -1,7 +1,8 @@
 package chen.example.aop;
 
-import com.sun.org.apache.bcel.internal.generic.RETURN;
+import chen.example.annotation.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.json.JSONObject;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -9,12 +10,17 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -22,9 +28,11 @@ import java.util.Objects;
  * @author chenbxxx
  * @email ai654778@vip.qq.com
  * @date 2018/9/11
+ *
+ *        本来想做一个页面和Controller层的参数校验,由于各种转换障碍和反射的不熟悉...暂且搁置
  */
-@Aspect
-@Component
+//@Aspect
+//@Component
 @Slf4j
 public class VerifyParam {
 
@@ -43,23 +51,10 @@ public class VerifyParam {
 
     /**
      * .....他娘的 around的执行在Before之前 该方法注释不用
-     * @param joinPoint
      */
     @Before("pointCut()")
-    public void doBefore(JoinPoint joinPoint){
+    public void doBefore(){
         log.info("Get into `doBefore` method");
-
-        // 打印请求路径日志
-//        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-//        if(Objects.isNull(attributes)) {
-//            return;
-//        }
-//        HttpServletRequest request = attributes.getRequest();
-//        log.info("URL          : " + request.getRequestURL().toString());
-//        log.info("HTTP_METHOD  : " + request.getMethod());
-//        log.info("IP           : " + request.getRemoteAddr());
-//        log.info("CLASS_METHOD : " + joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName());
-//        log.info("ARGS         : " + Arrays.toString(joinPoint.getArgs()));
     }
 
     /**
@@ -83,14 +78,69 @@ public class VerifyParam {
         }
         HttpServletRequest request = attributes.getRequest();
 
+        // 方法签名 ===> Method
         Signature signature = proceedingJoinPoint.getSignature();
+        MethodSignature methodSignature = (MethodSignature)signature;
+        Method method = methodSignature.getMethod();
 
-        // 获取目标对象
-        Class<?> aClass = proceedingJoinPoint.getTarget().getClass();
-        // 根据方法名获取对应方法
-        Method declaredMethod = aClass.getDeclaredMethod(signature.getName());
+        Method realMethod = proceedingJoinPoint.getTarget().getClass().getDeclaredMethod(signature.getName(), method.getParameterTypes());
+
+        // method ===> Parameter
+        Parameter[] parameters = realMethod.getParameters();
+        log.info("parameters:{}", Arrays.toString(parameters));
+
+        // 无参数则放行
+        if(parameters.length <= 0){
+            return proceedingJoinPoint.proceed();
+        }
+
+        boolean sign = true;
+        String message = "";
+        for (Parameter parameter : parameters){
+            log.info("正在获取名字为:{}的参数",parameter.getName());
+            // 获取校验参数的入参值
+            Object attribute = request.getAttribute(parameter.getName());
+            log.info("校验参数{},值为{}",parameter.getName(),attribute.toString()
+            );
+            Annotation[] annotations = parameter.getAnnotations();
+            for (Annotation annotation : annotations){
+                if((message = doVerify(attribute,annotation)).equals("success")){
+                    sign = false;
+                    break;
+                }
+            }
+        }
+
+        if(!sign){
+            HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
+            JSONObject result = new JSONObject();
+            result.put("code",1);
+            result.put("message",message);
+
+            PrintWriter writer = response.getWriter();
+            writer.print(result.toString());
+            writer.close();
+            response.flushBuffer();
+            return null;
+        }
 
         return proceedingJoinPoint.proceed();
-
     }
+
+
+    /**
+     * 验证方法
+     * @param attribute     属性值
+     * @param annotation    注解名称
+     * @return
+     */
+    private String doVerify(Object attribute,Annotation annotation){
+        if(annotation instanceof NotNull) {
+            if(Objects.isNull(attribute)){
+                return ((NotNull) annotation).message();
+            }
+        }
+        return "success";
+    }
+
 }
