@@ -4,8 +4,11 @@ package chen;
  * @author chenbxxx
  * @email ai654778@vip.qq.com
  * @date 2018/9/13
+ * @version 2018/9/13 没有太好的思路,先放着
  *
  *  题目地址:   https://leetcode-cn.com/problems/132-pattern/description/
+ *
+ *  TODO: 1
  */
 public class LeetCode456 {
     class Solution {
@@ -30,6 +33,7 @@ public class LeetCode456 {
 
                 }
             }
+            return false;
         }
     }
 }
