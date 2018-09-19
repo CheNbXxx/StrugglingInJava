@@ -31,15 +31,21 @@ public class SemaphoreExample {
         log.info("|*************  Starting  *************|");
         log.info("情景假设：某餐厅最多有{}个座位供顾客用餐",THREAD_CAPACITY);
 
-        for (int i = 0;i < 10;i++){
+        for (int i = 0;i < 100;i++){
             Thread.sleep(2000L);
             threadPoolExecutor.execute(() -> {
                 log.info("有顾客到餐厅,在{}用餐",Thread.currentThread().getName());
+                try {
+                    semaphore_5.acquire(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 try {
                     Thread.sleep(5000L);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                semaphore_5.release(1);
                 log.info("{}的顾客用餐结束",Thread.currentThread().getName());
             });
         }
