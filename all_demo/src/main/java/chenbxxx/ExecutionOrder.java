@@ -5,7 +5,7 @@ package chenbxxx;
  * @email ai654778@vip.qq.com
  * @date 18-9-16
  */
-public class Demo {
+public class ExecutionOrder {
     public static void main(String[] args){
 
         System.out.println("|**************  Create Maps Object ************|");
@@ -19,7 +19,7 @@ public class Demo {
          * 5. 当前类静态代码块
          * 6. 当前类的构造函数
          */
-        Maps maps = new Maps();
+//        Maps maps = new Maps();
 
         System.out.println("|************** Create Map Object **************|");
 
@@ -28,7 +28,10 @@ public class Demo {
          * 1. `静态代码块`全局只执行一次，优先于任何本类方法
          * 2. `非静态初始代码块`每次都会执行,且优先于`构造函数`
          */
-        Map map = new Map();
+//        Map map = new Map();
+
+        Maps.call();
+
    }
 }
 
@@ -44,6 +47,7 @@ class Map{
     static {
         System.out.println("Map Static Code Block");
     }
+
     {
         System.out.println("Map Not Static Code Block");
     }
@@ -51,6 +55,8 @@ class Map{
     Map(){
         System.out.println("map Constructor Method");
     }
+
+
 }
 
 class Maps extends Map{
@@ -65,6 +71,10 @@ class Maps extends Map{
 
     {
         System.out.println("Maps Not Static Code Block");
+    }
+
+    static void call(){
+        System.out.println("HelloWorld");
     }
 }
 
