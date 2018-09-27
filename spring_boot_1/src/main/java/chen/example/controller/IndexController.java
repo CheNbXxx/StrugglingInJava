@@ -25,7 +25,7 @@ public class IndexController {
     @MyVerify
     public Map<Integer,Object> test(@RequestParam("param") List<String> param1){
         log.info(param1.toString());
-        Map<Integer, Object> returnValue =new HashMap(1);
+        Map<Integer, Object> returnValue =new HashMap<>(1);
         returnValue.put(1,"success");
         log.info("Get into test");
         return returnValue;

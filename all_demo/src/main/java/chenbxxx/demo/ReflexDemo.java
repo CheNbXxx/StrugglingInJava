@@ -10,8 +10,25 @@ import java.lang.reflect.Method;
  * @email ai654778@vip.qq.com
  * @date 2018/9/5
  */
+/**
+ * 子类
+ */
 @Slf4j
-public class Demo {
+public class ReflexDemo{
+
+    private int i = 10;
+
+    private int j = 11;
+
+    private int getI(){
+        return this.i;
+    }
+
+    private int getJ(){
+        return this.j;
+    }
+
+
     public static void main(String[] args) throws ClassNotFoundException {
 
         /**
@@ -34,24 +51,6 @@ public class Demo {
         for (Field field : declaredFields){
             log.info(field.getName());
         }
-    }
-}
-
-/**
- * 子类
- */
-class ReflexDemo{
-
-    private int i = 10;
-
-    private int j = 11;
-
-    private int getI(){
-        return this.i;
-    }
-
-    private int getJ(){
-        return this.j;
     }
 }
 
