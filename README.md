@@ -1,4 +1,4 @@
-             <center>  <font size=5> <b>  StrugglingInJava<b> </font>  <center>
+                     StrugglingInJava 
 
                 个人Java学习demo  (〃'▽'〃)
 
