@@ -31,6 +31,4 @@
 
   ##### 数据库
 
-  - [mysql相关命令](
-
-  https://github.com/CheNbXxx/java-demos/wiki/Mysql)
+  - [mysql相关命令](https://github.com/CheNbXxx/java-demos/wiki/Mysql)
