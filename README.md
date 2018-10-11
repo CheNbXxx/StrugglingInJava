@@ -1,7 +1,10 @@
-# StrugglingInJava
-个人Java学习demo  (〃'▽'〃)
-- - -
-- ##### CheNbXxx
+<center>  <font size=5> <b>  StrugglingInJava<b> </font>  <center>
+
+                个人Java学习demo  (〃'▽'〃)
+
+---
+
+  ##### Java基础
 
   - [Java关键字整理](https://github.com/CheNbXxx/java-demos/wiki/Java关键字整理)
 
@@ -32,3 +35,4 @@
   ##### 数据库
 
   - [mysql相关命令](https://github.com/CheNbXxx/java-demos/wiki/Mysql)
+
