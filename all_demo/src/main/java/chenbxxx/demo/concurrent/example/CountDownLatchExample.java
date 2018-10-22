@@ -1,4 +1,4 @@
-package chenbxxx.demo.concurrent;
+package chenbxxx.demo.concurrent.example;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -3,6 +3,7 @@ package chenbxxx.algorithm.sort;
 
 /**
  * 快速排序
+ *  1. 迭代循环
  * @author chenbxxx
  * @email ai654778@vip.qq.com
  * @date 2018/10/11
