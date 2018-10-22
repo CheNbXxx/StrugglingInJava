@@ -1,7 +1,5 @@
-package chenbxxx.demo.collection;
+package chenbxxx.demo.collection.example;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 
 /**
@@ -21,7 +19,7 @@ public class HashMapExample {
 //
 //        System.out.println(Integer.toBinaryString(8 >> 1));
 
-//        Class clazz = HashMap.class;
+        Class clazz = HashMap.class;
 //        Type[] genericInterfaces = clazz.getGenericInterfaces();
 //
 //        System.out.println("/******************  genericInterfaces  ******************/");
@@ -34,7 +32,7 @@ public class HashMapExample {
 //        }
 
         Class<TestClass> testClassClass = TestClass.class;
-        Class.forName("chenbxxx.demo.collection.TestClass");
+        Class.forName("chenbxxx.demo.collection.example.TestClass");
 
     }
 

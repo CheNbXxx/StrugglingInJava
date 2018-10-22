@@ -1,4 +1,4 @@
-package chenbxxx.demo.collection;
+package chenbxxx.demo.collection.example;
 
 import java.util.PriorityQueue;
 

@@ -1,4 +1,4 @@
-package chenbxxx.demo;
+package chenbxxx.any;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,7 +38,7 @@ public class ReflexDemo{
          *  1、 Class.forName()
          *  2、 ClassName.class();
          *  3、 Objects.getClass(); */
-        Class reflex = Class.forName("chenbxxx.demo.ReflexDemo");
+        Class reflex = Class.forName("chenbxxx.any.ReflexDemo");
 
         // 获取方法
         Method[] methods = reflex.getMethods();

@@ -1,10 +1,7 @@
-package chenbxxx.demo;
+package chenbxxx.any;
 
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -22,7 +19,7 @@ public class ReflectDemo {
     }
 
     public ReflectDemo() throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException {
-        Class<?> aClass = Class.forName("chenbxxx.demo.ReflectExample");
+        Class<?> aClass = Class.forName("chenbxxx.any.ReflectExample");
 
         // 获取所有public属性,包括从父类继承的
         log.info(" =====> Fields");
@@ -80,7 +77,7 @@ class ReflectExample extends fatherClass{
     protected int protected_param;
     int default_param;
 
-    public void publicShow(@Test Integer i, Integer j){
+    public void publicShow(Integer i, Integer j){
         log.info("public method");
     }
 

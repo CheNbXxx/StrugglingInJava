@@ -16,10 +16,10 @@ public class ExecutionOrder {
          * 2. 当前类静态代码块(多个顺序同上)
          * 3. 父类的非静态初始代码块
          * 4. 父类的构造函数
-         * 5. 当前类静态代码块
+         * 5. 当前类非静态代码块
          * 6. 当前类的构造函数
          */
-//        Maps maps = new Maps();
+        Maps maps = new Maps();
 
         System.out.println("|************** Create Map Object **************|");
 
@@ -30,7 +30,7 @@ public class ExecutionOrder {
          */
 //        Map map = new Map();
 
-        Maps.call();
+//        Maps.call();
 
    }
 }
