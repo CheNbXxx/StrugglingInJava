@@ -1,9 +1,6 @@
 package top.chenbxxx.springboot_mybatis.mapper;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.springframework.stereotype.Component;
+import org.apache.ibatis.annotations.*;
 import top.chenbxxx.springboot_mybatis.entity.User;
 
 /**
@@ -14,6 +11,16 @@ import top.chenbxxx.springboot_mybatis.entity.User;
 @Mapper
 public interface UserMapper {
 
-    @Select("SELECT * FROM t_user where id = ${id}")
-    User selectById(@Param("id") Integer id) throws Exception;
+
+    @Select("SELECT * FROM t_user WHERE id=#{id}")
+    @Results(value = {
+            @Result(property = "id", column = "id", id = true),
+            @Result(property = "userAccount", column = "user_account"),
+            @Result(property = "userPasswd", column = "user_passwd"),
+            @Result(property = "userSalt",column = "user_salt")
+    })
+    User selectById(@Param("id") Integer id);
+
+    @Delete("DELETE FROM t_user WHERE id = #{uid}")
+    int deleteById(@Param("uid") int uid);
 }

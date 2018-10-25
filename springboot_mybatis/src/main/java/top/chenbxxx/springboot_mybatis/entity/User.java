@@ -1,6 +1,7 @@
 package top.chenbxxx.springboot_mybatis.entity;
 
 import lombok.Data;
+import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -11,6 +12,7 @@ import java.util.Date;
  * @date 18-10-23
  */
 @Data
+@ToString
 public class User implements Serializable {
      private Integer id;
 

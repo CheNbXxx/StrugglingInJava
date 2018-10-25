@@ -16,7 +16,7 @@ import javax.annotation.Resource;
 public class SpringbootMybatisApplicationTests {
 
     @Resource
-    private UserMapper mapper;
+    private UserMapper userMapper;
 
     @Resource
     private ProductMapper productMapper;
@@ -29,15 +29,9 @@ public class SpringbootMybatisApplicationTests {
     }
 
     @Test
-    public void contextLoads() {
+    public void userSelectByIdTest() {
         System.out.println("************* start ***************");
-        System.out.println(mapper);
-        User user = null;
-        try {
-            user = mapper.selectById(1);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        User user = userMapper.selectById(1);
         System.out.println(user);
     }
 
