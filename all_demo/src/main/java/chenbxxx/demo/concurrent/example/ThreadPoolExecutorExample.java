@@ -52,9 +52,44 @@ public class ThreadPoolExecutorExample {
         /**
          *  `ArrayBlockQueue`该线程可以指定等待队列的容量,接收到任务时,活动线程小于`corePoolSize`则创建并执行,等于则入队列,队列满则抛错.
          */
-        ArrayBlockingQueue arrayBlockingQueue = new ArrayBlockingQueue(10);
+        ArrayBlockingQueue arrayBlockingQueue = new ArrayBlockingQueue(7);
 
-       ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10, 100,
-                20, TimeUnit.MINUTES, synchronousQueue, r -> new Thread("TestThread"+r));
+        /**
+         * 根据输出可以判断,当线程数大于`corePoolSize`时,新的线程会放入阻塞队列`arrayBlockingQueue`,如果放入的等待线程太多超过预先设定的
+         *      阻塞队列大小,则会创建鑫线程执行,不过却不是从等待队列中取出最先等待的线程而是执行放不下的线程.如果线程太多超过缓存对列也超过了
+         *      线程池的最大线程数,则报错.
+         */
+       ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(2, 4,
+                20, TimeUnit.MINUTES, arrayBlockingQueue);
+
+       for (int i = 0;i < 20;i++) {
+           System.out.println("执行第"+(i+1)+"个线程");
+           threadPoolExecutor.execute(new BlockQueueTest(i));
+       }
+       System.out.println("poolSize:"+threadPoolExecutor.getPoolSize());
+       System.out.println("activeCount:"+ threadPoolExecutor.getActiveCount());
+    }
+
+
+}
+
+class BlockQueueTest implements Runnable{
+
+    private int i;
+
+    public BlockQueueTest(int i) {
+        this.i = i;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("********  线程"+(i+1)+"开始运行  **********");
+        try {
+            TimeUnit.SECONDS.sleep(10);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
+
+
