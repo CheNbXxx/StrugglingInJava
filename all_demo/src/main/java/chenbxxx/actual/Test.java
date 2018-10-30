@@ -15,15 +15,12 @@ public class Test {
                 new ThreadPoolExecutor(10,10,
                         10,  TimeUnit.MINUTES,new LinkedBlockingQueue<>(),Executors.defaultThreadFactory());
 
-        threadPoolExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    new CopyFileByMultithread(3).copyFile(new File("/home/chen/test"),new File("/home/chen/testMain3"));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                };
-            }
+        threadPoolExecutor.execute(() -> {
+            try {
+                new CopyFileByMultithread(3).copyFile(new File("/home/chen/test"),new File("/home/chen/testMain3"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            };
         });
 
     }
