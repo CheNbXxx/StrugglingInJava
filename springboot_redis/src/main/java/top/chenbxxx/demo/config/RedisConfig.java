@@ -1,5 +1,6 @@
 package top.chenbxxx.demo.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.KeyGenerator;
@@ -22,6 +23,7 @@ import java.lang.reflect.Method;
 @Configuration
 /** 启用缓存 */
 @EnableCaching
+@Slf4j
 public class RedisConfig {
 
 
@@ -41,7 +43,7 @@ public class RedisConfig {
             for (Object obj : objects) {
                 sb.append(obj.toString());
             }
-            System.out.println("调用Redis缓存Key : " + sb.toString());
+            log.info("调用Redis缓存Key : " + sb.toString());
             return sb.toString();
         };
     }
