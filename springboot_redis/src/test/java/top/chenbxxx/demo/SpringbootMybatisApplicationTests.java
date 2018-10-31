@@ -8,6 +8,7 @@ import top.chenbxxx.demo.entity.Product;
 import top.chenbxxx.demo.entity.User;
 import top.chenbxxx.demo.mapper.ProductMapper;
 import top.chenbxxx.demo.mapper.UserMapper;
+import top.chenbxxx.demo.service.ProductService;
 
 import javax.annotation.Resource;
 
@@ -21,6 +22,9 @@ public class SpringbootMybatisApplicationTests {
     @Resource
     private ProductMapper productMapper;
 
+    @Resource
+    private ProductService productService;
+
     @Test
     public void testProduct(){
         System.out.println("******** start *********");
@@ -33,6 +37,12 @@ public class SpringbootMybatisApplicationTests {
         System.out.println("************* start ***************");
         User user = userMapper.selectById(1);
         System.out.println(user);
+    }
+
+    @Test
+    public void ProductServiceTest(){
+        Product product = productService.getById(1);
+        System.out.println(product);
     }
 
 }
