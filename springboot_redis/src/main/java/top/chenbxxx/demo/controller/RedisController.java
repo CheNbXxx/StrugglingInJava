@@ -25,7 +25,6 @@ public class RedisController {
 
     @RequestMapping("test")
     private Product redisTest(){
-
         Long start = System.currentTimeMillis();
         Product byId = productService.getById(1);
         Long end = System.currentTimeMillis();
