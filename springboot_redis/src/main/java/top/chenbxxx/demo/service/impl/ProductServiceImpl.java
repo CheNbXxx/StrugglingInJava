@@ -1,5 +1,6 @@
 package top.chenbxxx.demo.service.impl;
 
+import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import top.chenbxxx.demo.entity.Product;
@@ -14,6 +15,7 @@ import javax.annotation.Resource;
  * @date 18-10-31
  */
 @Service("productService")
+@CacheConfig(cacheNames = "productCache")
 public class ProductServiceImpl implements ProductService {
 
     @Resource
