@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *  需要配置什么直接Override对应的方法就好
  */
 @Configuration
-public class webConfig implements WebMvcConfigurer {
+public class WebConfig implements WebMvcConfigurer {
 
 
     @Override
