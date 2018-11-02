@@ -23,3 +23,6 @@
 /dist/
 /nbdist/
 /.nb-gradle/
+
+### 隐藏db,mq,redis等的账号密码配置文件 ###
+*-private.*
