@@ -1,7 +1,6 @@
 package chenbxxx.rabbitmq;
 
 import com.rabbitmq.client.*;
-import org.apache.http.pool.ConnFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -82,7 +82,7 @@ class ReflectExample extends fatherClass{
     }
 
     private void privateShow(int i,int j){
-        log.info("private method");
+        log.info("privateConfig method");
     }
 
     protected void protectedShow(int i,int j){

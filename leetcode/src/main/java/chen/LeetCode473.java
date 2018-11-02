@@ -25,7 +25,7 @@ public class LeetCode473 {
 //            boolean[] isVisit=new boolean[nums.length];
 //            return dfs(nums,isVisit,0,0,sum/4,sum/4);
 //        }
-//        private boolean dfs(int nums[],boolean[] isVist,int index,int matchEdge,int target,int edgeTarget) {
+//        privateConfig boolean dfs(int nums[],boolean[] isVist,int index,int matchEdge,int target,int edgeTarget) {
 //            if(target==0){
 //                return dfs(nums,isVist,0,matchEdge+1,edgeTarget,edgeTarget);
 //            }
