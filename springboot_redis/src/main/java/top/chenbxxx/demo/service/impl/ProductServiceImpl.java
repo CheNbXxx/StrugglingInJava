@@ -21,7 +21,7 @@ public class ProductServiceImpl implements ProductService {
     @Resource
     private ProductMapper mapper;
 
-    @Cacheable(value = "productCache",key = "'product_'+#id")
+    @Cacheable(value = "productCache")
     @Override
     public Product getById(Integer id) {
         return mapper.selectById(id);

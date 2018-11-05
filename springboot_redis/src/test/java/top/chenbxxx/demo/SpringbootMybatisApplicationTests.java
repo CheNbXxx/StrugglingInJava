@@ -9,6 +9,7 @@ import top.chenbxxx.demo.entity.User;
 import top.chenbxxx.demo.mapper.ProductMapper;
 import top.chenbxxx.demo.mapper.UserMapper;
 import top.chenbxxx.demo.service.ProductService;
+import top.chenbxxx.demo.utils.RedisUtil;
 
 import javax.annotation.Resource;
 
@@ -24,6 +25,9 @@ public class SpringbootMybatisApplicationTests {
 
     @Resource
     private ProductService productService;
+
+    @Resource
+    private RedisUtil redisUtil;
 
     @Test
     public void testProduct(){
@@ -43,6 +47,12 @@ public class SpringbootMybatisApplicationTests {
     public void ProductServiceTest(){
         Product product = productService.getById(1);
         System.out.println(product);
+    }
+
+    @Test
+    public void RedisTest(){
+        redisUtil.set("testKey3","0");
+        System.out.println("END");
     }
 
 }

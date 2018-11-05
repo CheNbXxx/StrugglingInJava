@@ -2,6 +2,7 @@ package top.chenbxxx.demo.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
@@ -23,26 +24,28 @@ import java.io.Serializable;
 /** 启用缓存 */
 @EnableCaching
 @Slf4j
-public class RedisConfig {
-
+public class RedisConfig extends CachingConfigurerSupport {
 
     /**
-     * 自定义生成key的规则
+     * 指定缓存的键名生成方式
+     *      最后的生成形式为："productCache::top.chenbxxx.demo.service.impl.ProductServiceImpl::getById:1"
+     *  也可以在@Cacheable中制定key的格式
+     * @return  键
      */
     @Bean
+    @Override
     public KeyGenerator keyGenerator() {
-        return (o, method, objects) -> {
-            //格式化缓存key字符串
+        return (target, method, objects) -> {
+            // 键名字符串
             StringBuilder sb = new StringBuilder();
-            //追加类名
-            sb.append(o.getClass().getName());
-            //追加方法名
-            sb.append(method.getName());
-            //遍历参数并且追加
+            // 增加类的全路径名
+            sb.append(target.getClass().getName());
+            // 增加方法名
+            sb.append("::").append(method.getName()).append(":");
+            // 为缓存的每个类制定
             for (Object obj : objects) {
                 sb.append(obj.toString());
             }
-            log.info("调用Redis缓存Key : " + sb.toString());
             return sb.toString();
         };
     }
@@ -68,9 +71,13 @@ public class RedisConfig {
 
         // 更改key和Value序列化方式
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         redisTemplate.setConnectionFactory(connectionFactory);
 
         return redisTemplate;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Long.valueOf("false"));
     }
 }
