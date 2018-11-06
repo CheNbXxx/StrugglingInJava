@@ -1,4 +1,4 @@
-package chenbxxx.demo.concurrent.example;
+package chenbxxx.concurrent.example;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.LockSupport;

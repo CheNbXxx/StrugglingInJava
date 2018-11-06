@@ -1,4 +1,4 @@
-package chenbxxx.demo.concurrent.example;
+package chenbxxx.concurrent.example;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;

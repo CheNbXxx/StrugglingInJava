@@ -1,9 +1,8 @@
-package chenbxxx.demo.collection.example;
+package chenbxxx.example;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.SortedSet;
 
 /**
  * @author chenbxxx

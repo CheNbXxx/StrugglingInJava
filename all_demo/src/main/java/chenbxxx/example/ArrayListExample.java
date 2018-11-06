@@ -1,4 +1,4 @@
-package chenbxxx.demo.collection.example;
+package chenbxxx.example;
 
 import java.util.ArrayList;
 import java.util.Arrays;

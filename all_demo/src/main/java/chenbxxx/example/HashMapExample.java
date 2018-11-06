@@ -1,4 +1,4 @@
-package chenbxxx.demo.collection.example;
+package chenbxxx.example;
 
 import java.util.HashMap;
 
@@ -32,7 +32,7 @@ public class HashMapExample {
 //        }
 
         Class<TestClass> testClassClass = TestClass.class;
-        Class.forName("chenbxxx.demo.collection.example.TestClass");
+        Class.forName("chenbxxx.example.TestClass");
 
     }
 
