@@ -1,4 +1,4 @@
-package chenbxxx.demo.concurrent.example;
+package chenbxxx.concurrent.example;
 
 import java.util.concurrent.*;
 
@@ -60,7 +60,7 @@ public class ThreadPoolExecutorExample {
          *      线程池的最大线程数,则报错.
          */
        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(2, 4,
-                20, TimeUnit.MINUTES, arrayBlockingQueue);
+               20, TimeUnit.MINUTES, arrayBlockingQueue, r -> new Thread(r,"线程"));
 
        for (int i = 0;i < 20;i++) {
            System.out.println("执行第"+(i+1)+"个线程");

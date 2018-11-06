@@ -25,12 +25,11 @@ import java.io.Serializable;
 @EnableCaching
 @Slf4j
 public class RedisConfig extends CachingConfigurerSupport {
-
     /**
      * 指定缓存的键名生成方式
-     *      最后的生成形式为："productCache::top.chenbxxx.demo.service.impl.ProductServiceImpl::getById:1"
-     *  也可以在@Cacheable中制定key的格式
-     * @return  键
+     * 最后的生成形式为："productCache::top.chenbxxx.demo.service.impl.ProductServiceImpl::getById:1"
+     * 也可以在@Cacheable中制定key的格式
+     * @return 键
      */
     @Bean
     @Override
@@ -59,7 +58,6 @@ public class RedisConfig extends CachingConfigurerSupport {
         return RedisCacheManager.create(connectionFactory);
     }
 
-
     /**
      * 配置RedisTemplate配置信息
      * @param connectionFactory 连接工厂
@@ -71,13 +69,9 @@ public class RedisConfig extends CachingConfigurerSupport {
 
         // 更改key和Value序列化方式
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-//        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         redisTemplate.setConnectionFactory(connectionFactory);
 
         return redisTemplate;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(Long.valueOf("false"));
     }
 }

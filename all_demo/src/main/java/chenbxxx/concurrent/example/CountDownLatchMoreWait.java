@@ -1,6 +1,6 @@
-package chenbxxx.demo.concurrent;
+package chenbxxx.concurrent.example;
 
-import chenbxxx.demo.collection.example.HashExample;
+import chenbxxx.example.HashExample;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
