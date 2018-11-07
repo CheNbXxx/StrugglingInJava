@@ -43,7 +43,7 @@ public class MyBatisConfig {
         sessionFactory.setTypeAliasesPackage("top.chenbxxx.rabbitmqproducer.entity");
         // 设置Mapper地址
         sessionFactory.setMapperLocations(new PathMatchingResourcePatternResolver()
-                .getResources("classpath:/mybatis/mapping/*.xml"));
+                .getResources("classpath:mapping/*.xml"));
         return sessionFactory.getObject();
     }
 

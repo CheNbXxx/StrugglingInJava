@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import top.chenbxxx.rabbitmqproducer.config.properties.DruidDataSourceProperties;
 
+import javax.annotation.Resource;
+
 /**
  *
  * Druid DataSource配置类
@@ -33,12 +35,16 @@ import top.chenbxxx.rabbitmqproducer.config.properties.DruidDataSourceProperties
 @EnableConfigurationProperties(DruidDataSourceProperties.class)
 public class DruidDataSourceConfig {
 
-    @Autowired
+    @Resource
     private DruidDataSourceProperties druidDataSourceProperties;
 
     @Bean("druidDataSource")
     public DruidDataSource druidDataSource(){
         DruidDataSource druidDataSource = new DruidDataSource();
+        druidDataSource.setDriverClassName(druidDataSourceProperties.getDriverClassName());
+        druidDataSource.setUrl(druidDataSourceProperties.getUrl());
+        druidDataSource.setUsername(druidDataSourceProperties.getUsername());
+        druidDataSource.setPassword(druidDataSourceProperties.getPassword());
         druidDataSource.setMaxActive(10);
         // 中间可配置Druid相关属性
         return druidDataSource;

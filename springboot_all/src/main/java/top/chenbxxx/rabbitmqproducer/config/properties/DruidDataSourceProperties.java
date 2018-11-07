@@ -1,5 +1,6 @@
 package top.chenbxxx.rabbitmqproducer.config.properties;
 
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
@@ -12,9 +13,10 @@ import org.springframework.stereotype.Component;
  * @email ai654778@vip.qq.com
  * @date 18-11-4
  */
+@Data
 @Component
 @ConfigurationProperties(prefix = "spring.datasource")
-@PropertySource("classpath:")
+@PropertySource({"classpath:application.properties","classpath:application-private.properties"})
 public class DruidDataSourceProperties {
 
     private String driverClassName;

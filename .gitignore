@@ -26,3 +26,14 @@
 
 ### 隐藏db,mq,redis等的账号密码配置文件 ###
 *-private.*
+将删除 all_demo/target/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/comsumer/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/config/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/constant/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/entity/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/mapper/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/service/
+将删除 rabbitmq-comsumer/src/main/java/top/chenbxxx/rabbitmqproducer/utils/
+将删除 rabbitmq-comsumer/src/main/resources/mapping/
+将删除 rabbitmq-producer/src/main/java/top/chenbxxx/rabbitmqproducer/comsumer/
+将删除 rabbitmq-producer/src/main/resources/mapping/

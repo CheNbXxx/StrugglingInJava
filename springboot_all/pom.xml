@@ -4,11 +4,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>top.chenbxxx</groupId>
-    <artifactId>rabbitmq-producer</artifactId>
+    <artifactId>springboot_all</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>rabbitmq-producer</name>
+    <name>springboot_all</name>
     <description>Demo project for Spring Boot</description>
 
     <parent>
@@ -72,6 +72,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+            <version>2.0</version>
         </dependency>
     </dependencies>
 
