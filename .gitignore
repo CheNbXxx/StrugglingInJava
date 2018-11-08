@@ -37,3 +37,5 @@
 将删除 rabbitmq-comsumer/src/main/resources/mapping/
 将删除 rabbitmq-producer/src/main/java/top/chenbxxx/rabbitmqproducer/comsumer/
 将删除 rabbitmq-producer/src/main/resources/mapping/
+leetcode/target/
+small_demo/src/main/java/chenbxxx/actual/totalword/
