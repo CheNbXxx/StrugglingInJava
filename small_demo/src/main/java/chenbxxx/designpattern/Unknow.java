@@ -8,36 +8,36 @@ package chenbxxx.designpattern;
  * @date 2018/10/31 14:08
  */
 public class Unknow {
-     public static void main(String[] args) {
-          new doClass().do111();
-     }
+    public static void main(String[] args) {
+        new doClass().do111();
+    }
 }
 
-interface BaseClass{
-     void show();
+interface BaseClass {
+    void show();
 }
 
-class Hello implements BaseClass{
+class Hello implements BaseClass {
 
-     @Override
-     public void show() {
-          System.out.println("HelloWorld");
-     }
+    @Override
+    public void show() {
+        System.out.println("HelloWorld");
+    }
 }
 
-abstract class BaseDo{
-     abstract BaseClass get();
+abstract class BaseDo {
+    abstract BaseClass get();
 
-     public void do111(){
-          get().show();
-     }
+    public void do111() {
+        get().show();
+    }
 }
 
-class doClass extends BaseDo{
+class doClass extends BaseDo {
 
-     @Override
-     BaseClass get() {
-          return new Hello();
-     }
+    @Override
+    BaseClass get() {
+        return new Hello();
+    }
 }
 

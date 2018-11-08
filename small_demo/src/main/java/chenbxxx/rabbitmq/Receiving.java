@@ -14,7 +14,7 @@ import java.util.concurrent.TimeoutException;
  * @date 2018/11/1 12:42
  */
 public class Receiving {
-    private final static String QUEUE_NAME ="hello";
+    private final static String QUEUE_NAME = "hello";
 
     public static void main(String[] args) throws IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory();
@@ -24,7 +24,7 @@ public class Receiving {
 
         try (Connection connection = factory.newConnection();
              Channel channel = connection.createChannel();
-        ){
+        ) {
             channel.queueDeclare(QUEUE_NAME, false, false, false, null);
             System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
             Consumer consumer = new DefaultConsumer(channel) {

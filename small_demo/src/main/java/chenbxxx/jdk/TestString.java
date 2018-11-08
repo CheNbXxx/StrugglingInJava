@@ -2,7 +2,8 @@ package chenbxxx.jdk;
 
 /**
  * String对象测试类
- *      首先我们要知道 `=`是对比地址，或者说引用地址。
+ * 首先我们要知道 `=`是对比地址，或者说引用地址。
+ *
  * @author chen
  * @email ai654778@vip.qq.com
  * @date 18-10-17
@@ -40,14 +41,14 @@ public class TestString {
 
 
         // 只要全部是以字面量形式创建的字符串，全部都会到常量池中检查是否存在
-        String s5 = "CheN"+"bXxx";
+        String s5 = "CheN" + "bXxx";
         // true
         System.out.println(s5 == s1);
 
         // 表达式中存在非字面量形式的创建就会在堆中创建对象
         String tempS = "bXxx";
-        String s6 = "CheN"+new String("bXxx");
-        String s7 = "CheN"+tempS;
+        String s6 = "CheN" + new String("bXxx");
+        String s7 = "CheN" + tempS;
         // false
         System.out.println(s5 == s6);
         // false

@@ -24,15 +24,16 @@ public class HttpUtil {
     /**
      * 获取Http请求的所有响应信息
      * Get 方式
-     * @param uri   目标URI
+     *
+     * @param uri 目标URI
      * @return
      */
     public static JSONObject getHttpGetResponse(URI uri) {
-        try(CloseableHttpClient client = HttpClients.createDefault()){
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
             HttpGet httpget = new HttpGet(uri);
-            try(CloseableHttpResponse closeableHttpResponse = client.execute(httpget)) {
+            try (CloseableHttpResponse closeableHttpResponse = client.execute(httpget)) {
                 StatusLine statusLine = closeableHttpResponse.getStatusLine();
-                if(statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
                     // 获取Http实体
                     HttpEntity entity = closeableHttpResponse.getEntity();
                     // 获取输入流并读取全部的信息
@@ -49,11 +50,11 @@ public class HttpUtil {
                     return JSONObject.fromObject(stringBuilder.toString());
                 }
 
-                log.info("URI:{} 的远程连接出错,错误码为:{}",uri,statusLine.getStatusCode());
+                log.info("URI:{} 的远程连接出错,错误码为:{}", uri, statusLine.getStatusCode());
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-            log.info("URI:{} 的远程连接出错",uri);
+            log.info("URI:{} 的远程连接出错", uri);
         }
         return new JSONObject();
     }

@@ -9,7 +9,7 @@ import java.util.Date;
  * @author chenbxxx
  * @email ai654778@vip.qq.com
  * @date 2018/8/9
- *
+ * <p>
  * java.time包内，有几个比较重要的组件，
  * Instant（时间戳）
  * LocalDate（日期）
@@ -25,28 +25,32 @@ public class TimeUtil {
 
     /**
      * Date -> LocalDateTime
+     *
      * @param date
      * @return
      */
-    public static LocalDateTime date2LocalDateTime(Date date){
-        return LocalDateTime.ofInstant(date.toInstant(),ZoneId.systemDefault());
+    public static LocalDateTime date2LocalDateTime(Date date) {
+        return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
     }
 
     /**
      * LocalDateTime -> Date
+     *
      * @param localDateTime
      * @return
      */
-    public static Date dateLocalTime2Date(LocalDateTime localDateTime){
+    public static Date dateLocalTime2Date(LocalDateTime localDateTime) {
         return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
+
     /**
      * date -> localDate
-     * @param date  date对象
+     *
+     * @param date date对象
      * @return
      */
-    public static LocalDate date2LocalDate(Date date){
-        return LocalDateTime.ofInstant(date.toInstant(),ZoneId.systemDefault()).toLocalDate();
+    public static LocalDate date2LocalDate(Date date) {
+        return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault()).toLocalDate();
     }
 
 
@@ -65,6 +69,7 @@ public class TimeUtil {
 
         return Math.abs(now.until(dateTime, ChronoUnit.YEARS));
     }
+
     /**
      * 计算给定时间到当前时间的月份数
      *
@@ -83,6 +88,7 @@ public class TimeUtil {
 
     /**
      * 计算给定时间到当前时间的天数
+     *
      * @param date
      * @return
      */
@@ -98,6 +104,7 @@ public class TimeUtil {
 
     /**
      * 计算给定时间到给定的月份
+     *
      * @param start
      * @param end
      * @return
@@ -111,9 +118,6 @@ public class TimeUtil {
 
         return Math.abs(startTime.until(endTime, ChronoUnit.MONTHS));
     }
-
-
-
 
 
     public static void main(String[] args) {

@@ -8,17 +8,21 @@ import java.util.concurrent.*;
  * @author chenbxxx
  * @email ai654778@vip.qq.com
  * @date 2018/7/26
- *
- *  cyclicBarrier可以简单理解为比赛，一个运动员入场还不行，还得等别的运动员全都入场 才能开始比赛。
+ * <p>
+ * cyclicBarrier可以简单理解为比赛，一个运动员入场还不行，还得等别的运动员全都入场 才能开始比赛。
  */
 public class CyclicBarrierExample {
 
-    /** 运动员需求数 */
+    /**
+     * 运动员需求数
+     */
     private static final int PLAYER_NUMBER = 3;
 
-    /** 公用线程池 */
-    private static final ThreadPoolExecutor executorService =new ThreadPoolExecutor(10, 10, 10, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),new MyThreadFactory("CyclicBarrierExample"));
+    /**
+     * 公用线程池
+     */
+    private static final ThreadPoolExecutor executorService = new ThreadPoolExecutor(10, 10, 10, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(), new MyThreadFactory("CyclicBarrierExample"));
 
     public static void main(String[] args) throws InterruptedException {
         // 回调函数用的匿名内部类，所以不能用log.info方法打印
@@ -36,10 +40,14 @@ public class CyclicBarrierExample {
     @Slf4j
     static class Player implements Runnable {
 
-        /** 线程名字 */
+        /**
+         * 线程名字
+         */
         private String playerNum;
 
-        /** 公用栅栏 */
+        /**
+         * 公用栅栏
+         */
         private CyclicBarrier cyclicBarrier;
 
         Player(String playerNum, CyclicBarrier cyclicBarrier) {

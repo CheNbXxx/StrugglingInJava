@@ -19,8 +19,8 @@ public class ThreadPoolExecutorExample {
 
     /**
      * 定长线程池
-     *  1. 可控制线程最大并发数
-     *  2. 超出的线程会在队列中等待
+     * 1. 可控制线程最大并发数
+     * 2. 超出的线程会在队列中等待
      */
     ExecutorService fixedThreadPool = Executors.newFixedThreadPool(10);
 
@@ -36,6 +36,7 @@ public class ThreadPoolExecutorExample {
      * 2. 所有任务按照指定顺序执行，即遵循队列的入队出队规则
      */
     ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+
     public static void main(String[] args) {
         /**
          * `SynchronousQueue`该阻塞队列不会保留任何线程,接收到任务之后就交给线程处理,池中无可用线程就创建.
@@ -59,21 +60,21 @@ public class ThreadPoolExecutorExample {
          *      阻塞队列大小,则会创建鑫线程执行,不过却不是从等待队列中取出最先等待的线程而是执行放不下的线程.如果线程太多超过缓存对列也超过了
          *      线程池的最大线程数,则报错.
          */
-       ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(2, 4,
-               20, TimeUnit.MINUTES, arrayBlockingQueue, r -> new Thread(r,"线程"));
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(2, 4,
+                20, TimeUnit.MINUTES, arrayBlockingQueue, r -> new Thread(r, "线程"));
 
-       for (int i = 0;i < 20;i++) {
-           System.out.println("执行第"+(i+1)+"个线程");
-           threadPoolExecutor.execute(new BlockQueueTest(i));
-       }
-       System.out.println("poolSize:"+threadPoolExecutor.getPoolSize());
-       System.out.println("activeCount:"+ threadPoolExecutor.getActiveCount());
+        for (int i = 0; i < 20; i++) {
+            System.out.println("执行第" + (i + 1) + "个线程");
+            threadPoolExecutor.execute(new BlockQueueTest(i));
+        }
+        System.out.println("poolSize:" + threadPoolExecutor.getPoolSize());
+        System.out.println("activeCount:" + threadPoolExecutor.getActiveCount());
     }
 
 
 }
 
-class BlockQueueTest implements Runnable{
+class BlockQueueTest implements Runnable {
 
     private int i;
 
@@ -83,7 +84,7 @@ class BlockQueueTest implements Runnable{
 
     @Override
     public void run() {
-        System.out.println("********  线程"+(i+1)+"开始运行  **********");
+        System.out.println("********  线程" + (i + 1) + "开始运行  **********");
         try {
             TimeUnit.SECONDS.sleep(10);
         } catch (InterruptedException e) {

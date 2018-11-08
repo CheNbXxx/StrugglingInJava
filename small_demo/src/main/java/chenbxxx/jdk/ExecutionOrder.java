@@ -6,7 +6,7 @@ package chenbxxx.jdk;
  * @date 18-9-16
  */
 public class ExecutionOrder {
-    public static void main(String[] args){
+    public static void main(String[] args) {
 
         System.out.println("|**************  Create Maps Object ************|");
 
@@ -32,17 +32,17 @@ public class ExecutionOrder {
 
 //        Maps.call();
 
-   }
+    }
 }
 
 /**
  * 测试调用顺序的具体类
- *  三个方法分别为：
- *      1. 静态代码快
- *      2. 非静态初始代码块
- *      3. 构造函数
+ * 三个方法分别为：
+ * 1. 静态代码快
+ * 2. 非静态初始代码块
+ * 3. 构造函数
  */
-class Map{
+class Map {
 
     static {
         System.out.println("Map Static Code Block");
@@ -52,20 +52,20 @@ class Map{
         System.out.println("Map Not Static Code Block");
     }
 
-    Map(){
+    Map() {
         System.out.println("map Constructor Method");
     }
 
 
 }
 
-class Maps extends Map{
+class Maps extends Map {
 
-    Maps(){
+    Maps() {
         System.out.println("Maps Contructor Method");
     }
 
-    static{
+    static {
         System.out.println("Maps Static Code Block");
     }
 
@@ -73,7 +73,7 @@ class Maps extends Map{
         System.out.println("Maps Not Static Code Block");
     }
 
-    static void call(){
+    static void call() {
         System.out.println("HelloWorld");
     }
 }
