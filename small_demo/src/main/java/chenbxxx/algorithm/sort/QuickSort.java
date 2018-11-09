@@ -18,7 +18,7 @@ public class QuickSort {
      * @param low   需要排序的范围最左端
      * @param high  需要排序的范围最右端
      */
-    void qSort(int[] array, int low, int high) {
+    private void qSort(int[] array, int low, int high) {
         if (low < high) {
             int pivot = innerSort(array, low, high);
             qSort(array, low, pivot - 1);
@@ -34,7 +34,7 @@ public class QuickSort {
      * @param high  需要排序的范围最右端
      * @return
      */
-    int innerSort(int[] array, int low, int high) {
+    private int innerSort(int[] array, int low, int high) {
         // 选取一个基准点
         // 数组中的所有数会和该数比较,比他大的放在右边,小的放在左边
         int sign = array[low];
