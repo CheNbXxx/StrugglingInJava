@@ -9,10 +9,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author CheNbXxx
  * @description
+ *      以单例模式获取线程池实例
  * @email chenbxxx@gmail.con
  * @date 2018/11/7 16:20
  */
-class ThreadPoolExecutorFactory {
+public class ThreadPoolExecutorFactory {
 
     /** 线程池核心线程数目 */
     private static final int CORE_POOL_SIZE = 5;
@@ -33,7 +34,7 @@ class ThreadPoolExecutorFactory {
      * 获取唯一线程池
      * @return 线程池实例
      */
-    static ThreadPoolExecutor getInstance() {
+    public static ThreadPoolExecutor getInstance() {
         if (Objects.isNull(instance)) {
             synchronized (ThreadPoolExecutorFactory.class) {
                 if (Objects.isNull(instance)) {
