@@ -19,7 +19,7 @@ public class SelectSort {
      *
      * @param arr
      */
-    void sSort(int[] arr) {
+    private void sSort(int[] arr) {
         if (Objects.isNull(arr) || arr.length == 0) {
             return;
         }
@@ -44,7 +44,7 @@ public class SelectSort {
      * @param src 原位置
      * @param des 目标位置
      */
-    void swap(int[] arr, int src, int des) {
+    private void swap(int[] arr, int src, int des) {
         int i = arr[src];
         arr[src] = arr[des];
         arr[des] = i;
