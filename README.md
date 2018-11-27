@@ -1,6 +1,5 @@
- 
-<div align="center">    
  #### StrugglingInJava
+<div align="center">    
 <br/>
 
 ![](https://img.shields.io/badge/language-java-orange.svg)
