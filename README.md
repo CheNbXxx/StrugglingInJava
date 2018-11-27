@@ -1,7 +1,5 @@
  
 <div align="center">    
- 
-StrugglingInJava 
 <br/>
 
 ![](https://img.shields.io/badge/language-java-orange.svg)
