@@ -1,5 +1,5 @@
-<center>#### StrugglingInJava</center>
-<div align="center">    
+### StrugglingInJava
+<div>    
 <br/>
 
 ![](https://img.shields.io/badge/language-java-orange.svg)
@@ -7,6 +7,8 @@
 [![Website](https://img.shields.io/website-chenbxxx-down-green-red/https/shields.io.svg?label=my-blog)](chenbxxx.top)    
 
 </div>
+
+---
 
 个人Java学习demo  (〃'▽'〃)
 
