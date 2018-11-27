@@ -1,4 +1,4 @@
- #### StrugglingInJava
+<center>#### StrugglingInJava</center>
 <div align="center">    
 <br/>
 
