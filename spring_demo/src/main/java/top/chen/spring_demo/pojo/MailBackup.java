@@ -1,6 +1,7 @@
 package top.chen.spring_demo.pojo;
 
 import lombok.*;
+import top.chen.spring_demo.enums.MailSendSign;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
@@ -27,22 +28,22 @@ public class MailBackup implements Serializable {
     /** 主键*/
     @Id
     @Column(name = "id")
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /** 接收方*/
     @Email
-    @Column(name = "to",length = 320)
-    private String to;
+    @Column(name = "to_",length = 320)
+    private String to_;
 
     /** 主体内容*/
     @Column(name = "content",length = 1024)
     private String content;
 
     /** 发送标记 0未发送 1已发送*/
-    @Column(name = "sent_sign")
+    @Column(name = "send_sign")
     @Enumerated(EnumType.ORDINAL)
-    private Integer sendSign;
+    private MailSendSign sendSign;
 
     /** 发送时间*/
     @Past

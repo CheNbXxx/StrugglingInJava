@@ -12,19 +12,20 @@ import lombok.AllArgsConstructor;
 public enum MailSendSign {
 
     /** 已发送*/
-    NOT_SEND(0,"已发送"),
+    NOT_SEND(1,"已发送"),
 
     /** 未发送*/
-    SEND(1,"未发送")
+    SEND(0,"未发送")
     ;
-    private int key;
+    private Integer key;
     private String value;
 
-    public int getKey() {
+
+    public Integer getKey() {
         return key;
     }
 
-    public void setKey(int key) {
+    public void setKey(Integer key) {
         this.key = key;
     }
 
