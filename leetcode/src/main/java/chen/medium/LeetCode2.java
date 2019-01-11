@@ -1,4 +1,4 @@
-package chen;
+package chen.medium;
 
 import java.util.Objects;
 

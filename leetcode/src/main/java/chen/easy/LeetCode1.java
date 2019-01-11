@@ -1,4 +1,4 @@
-package chen;
+package chen.easy;
 
 import java.util.Arrays;
 
