@@ -1,4 +1,4 @@
-package chenbxxx.regex;
+package chenbxxx.example.regex;
 
 import java.util.regex.Pattern;
 

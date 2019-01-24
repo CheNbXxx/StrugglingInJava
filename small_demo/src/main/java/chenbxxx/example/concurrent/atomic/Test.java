@@ -1,4 +1,4 @@
-package chenbxxx.concurrent.atomic;
+package chenbxxx.example.concurrent.atomic;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

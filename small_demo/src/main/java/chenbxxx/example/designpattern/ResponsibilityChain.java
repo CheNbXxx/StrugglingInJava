@@ -1,4 +1,4 @@
-package chenbxxx.designpattern;
+package chenbxxx.example.designpattern;
 
 import java.util.ArrayList;
 import java.util.List;

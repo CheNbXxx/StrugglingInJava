@@ -1,4 +1,4 @@
-package chenbxxx.jdk;
+package chenbxxx.example.jdk;
 
 /**
  * @author chen

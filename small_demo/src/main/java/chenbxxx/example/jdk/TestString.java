@@ -1,4 +1,4 @@
-package chenbxxx.jdk;
+package chenbxxx.example.jdk;
 
 /**
  * String对象测试类

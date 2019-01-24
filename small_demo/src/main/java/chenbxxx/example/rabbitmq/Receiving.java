@@ -1,4 +1,4 @@
-package chenbxxx.rabbitmq;
+package chenbxxx.example.rabbitmq;
 
 import com.rabbitmq.client.*;
 

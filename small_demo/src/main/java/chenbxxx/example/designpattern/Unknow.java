@@ -1,4 +1,4 @@
-package chenbxxx.designpattern;
+package chenbxxx.example.designpattern;
 
 /**
  * function:

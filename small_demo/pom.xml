@@ -60,8 +60,12 @@
 			<version>2.3</version>
             <classifier>jdk15</classifier>
 		</dependency>
+        <dependency>
+            <groupId>antlr</groupId>
+            <artifactId>antlr</artifactId>
+        </dependency>
 
-	</dependencies>
+    </dependencies>
 
 	<build>
 		<plugins>

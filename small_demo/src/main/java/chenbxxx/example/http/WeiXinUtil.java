@@ -1,4 +1,4 @@
-package chenbxxx.http;
+package chenbxxx.example.http;
 
 import lombok.extern.slf4j.Slf4j;
 import net.sf.json.JSONObject;

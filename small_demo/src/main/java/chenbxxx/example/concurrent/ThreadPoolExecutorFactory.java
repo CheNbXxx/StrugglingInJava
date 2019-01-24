@@ -1,4 +1,4 @@
-package chenbxxx.concurrent;
+package chenbxxx.example.concurrent;
 
 
 import java.util.Objects;
