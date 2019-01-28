@@ -71,7 +71,7 @@
 
 - 待继续深入
 
-[深入了解Java虚拟机阅读笔记](https://github.com/CheNbXxx/StrugglingInJava/wiki/%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0)
+[深入了解Java虚拟机阅读笔记](https://github.com/CheNbXxx/StrugglingInJava/wiki/%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%9F%A5%E8%AF%86%E6%A2%B3%E7%90%86)
 
 [永久代(PermGen) & 元空间(Metaspace)](https://github.com/CheNbXxx/StrugglingInJava/wiki/Java8%E4%B8%AD%E7%9A%84Metaspace)
 
