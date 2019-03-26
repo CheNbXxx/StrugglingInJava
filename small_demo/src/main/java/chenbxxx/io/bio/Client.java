@@ -1,4 +1,4 @@
-package bio;
+package chenbxxx.io.bio;
 
 import lombok.extern.slf4j.Slf4j;
 
