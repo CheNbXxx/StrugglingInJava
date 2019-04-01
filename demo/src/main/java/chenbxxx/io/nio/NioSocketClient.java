@@ -15,7 +15,7 @@ public class NioSocketClient {
 
     private static final String HOST = "127.0.0.1";
 
-    private static final Integer PORT = 8888;
+    private static final Integer PORT = 8080;
 
     public static void main(String[] args) throws IOException {
         try(
