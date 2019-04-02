@@ -18,16 +18,13 @@ public class NioSocketClient {
     private static final Integer PORT = 8080;
 
     public static void main(String[] args) throws IOException {
-        try(
-                // 1. 打开Socket通道,并绑定到指定的IP和端口
-              SocketChannel open = SocketChannel.open()
-                ) {
-            open.connect(new InetSocketAddress(HOST,PORT));
-            // 2. 发消息
-            ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-            byteBuffer.put("HelloWorld".getBytes());
-            byteBuffer.flip();
-            open.write(byteBuffer);
-        }
+        // 1. 打开Socket通道,并绑定到指定的IP和端口
+        SocketChannel open = SocketChannel.open();
+        open.connect(new InetSocketAddress(HOST,PORT));
+        // 2. 发消息
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+        byteBuffer.put("HelloWorld".getBytes());
+        byteBuffer.flip();
+        open.write(byteBuffer);
     }
 }

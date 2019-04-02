@@ -11,6 +11,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class NioSocketServerWithSelector {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         NioSocketServerWithSelector.startServer();
     }
 
@@ -37,12 +38,12 @@ public class NioSocketServerWithSelector {
     private static final AtomicInteger CLIENT_SIZE = new AtomicInteger();
 
     static {
-        WRITE_BUFFER.put(("已成功连接到服务端:"+CLIENT_SIZE.incrementAndGet()).getBytes());
         WRITE_BUFFER.mark();
+        WRITE_BUFFER.put(("收到" + CLIENT_SIZE.incrementAndGet()+"条消息").getBytes());
     }
 
 
-    private static void startServer() throws IOException {
+    private static void startServer() throws IOException, InterruptedException {
         // 打开服务端
         ServerSocketChannel server = ServerSocketChannel.open();
 
@@ -63,10 +64,11 @@ public class NioSocketServerWithSelector {
         // 3. OP_ACCEPT - channel有连接
         // 4. OP_CONNECT - channel可连接
         server.register(selector, SelectionKey.OP_ACCEPT);
-
-        while (true){
+        log.info("||====== 服务端启动");
+        while (true) {
+            TimeUnit.SECONDS.sleep(3);
             // 没有准备好的通道
-            if(selector.select() <= 0){
+            if (selector.select() <= 0) {
                 continue;
             }
 
@@ -79,33 +81,35 @@ public class NioSocketServerWithSelector {
 
                 // 删除防止重复处理
                 iterator.remove();
+                try {
+                    // 有通道待连接
+                    if (next.isAcceptable()) {
+                        // 建立通道并注册到selector
+                        ((ServerSocketChannel) next.channel())
+                                .accept()
+                                .configureBlocking(false)
+                                .register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                    }
 
-                // 有通道待连接
-                if (next.isAcceptable()) {
-                    // 建立通道并注册到selector
-                    server.accept()
-                            .configureBlocking(false)
-                            .register(selector, SelectionKey.OP_READ);
-                    continue;
-                }
+                    // 有通道可读
+                    if (next.isReadable()) {
+                        // 获取内容并展示
+                        SocketChannel channel = (SocketChannel) next.channel();
+                        channel.read(READ_BUFFER);
+                        READ_BUFFER.flip();
+                        log.info(new String(READ_BUFFER.array()));
+                        READ_BUFFER.clear();
+                    }
 
-                // 有通道可读
-                if (next.isReadable()) {
-                    // 获取内容并展示
-                    SocketChannel channel = (SocketChannel) next.channel();
-                    channel.read(READ_BUFFER);
-                    READ_BUFFER.flip();
-                    log.info(new String(READ_BUFFER.array()));
-                    READ_BUFFER.clear();
-                    continue;
-                }
-
-                // 有通道可读
-                if (next.isWritable()) {
-                    // 获取内容并展示
-                    ((SocketChannel) next.channel()).write(WRITE_BUFFER);
-                    WRITE_BUFFER.reset();
-                    continue;
+                    // 有通道可写
+                    if (next.isWritable()) {
+                        log.info("||====== 消息回传");
+                        // 获取内容并展示
+                        ((SocketChannel) next.channel()).write(WRITE_BUFFER);
+                        WRITE_BUFFER.reset();
+                    }
+                }catch (Exception e){
+                    next.channel().close();
                 }
             }
         }
