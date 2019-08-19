@@ -1,4 +1,4 @@
-package chenbxxx.netty.echo;
+package chenbxxx.netty.decoder_test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -11,7 +11,6 @@ import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -23,6 +22,9 @@ import java.util.List;
 @Slf4j
 public class FrameChunkDecoderTest {
 
+    /**
+     * 规定最大报文长度
+     */
     static class FrameChunkDecoder extends ByteToMessageDecoder {
 
         private Integer allowMaxFrameLength;
@@ -55,6 +57,9 @@ public class FrameChunkDecoderTest {
         }
     }
 
+    /**
+     * Message to Integer
+     */
     static class MessageToIntegerDecoder extends ByteToMessageDecoder {
 
         @Override
