@@ -1,0 +1,8 @@
+syntax = "proto3";
+option java_package = "chenbxxx.actual.netty_protocol_buffer";
+option java_outer_classname="HeartBeatProto";
+
+message HeartBeat {
+    int32 heart_id = 1;
+    string heart_time = 2;
+}
