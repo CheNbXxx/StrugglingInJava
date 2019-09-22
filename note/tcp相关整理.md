@@ -12,13 +12,13 @@ TCP是一种面向连接的，基于字节流的，可靠的传输控制协议�
 
 ### 内容梳理
 
-![1569166769008](/home/chen/TCP模块整理.png)
+![1569166769008](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP模块整理.png)
 
 - TCP的内容模块整理，方便记忆。
 
 ### 一、TCP报文首部
 
-![](/home/chen/TCP首部格式.png)
+![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP首部格式.png)
 
 
 
@@ -123,7 +123,7 @@ TCP的四元组为源IP，源端口，目的IP，目的端口，**TCP首部中�
 
 稍微有点常识的程序猿应该都知道，TCP建立连接的时候需要往返发送三个报文。
 
-   ![1568818645296](/home/chen/TCP打开连接.png)
+   ![1568818645296](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP打开连接.png)
 
 1. 连接发起者(客户端)会向服务端发送一个**SYN报文**，报文中除了目的端口，还包括ISN(初始序列号)以及部分选项字段。
 2. 服务端接受后会回复一个**SYN报文**作为响应，然后将接收到的SEQ+1，作为报文的ACK值，并指明服务端的的初始序列号等信息。
@@ -163,7 +163,7 @@ TCP的四元组为源IP，源端口，目的IP，目的端口，**TCP首部中�
 
 相对来说关闭连接的四次挥手就好理解多了。
 
-   ![1568820312811](/home/chen/TCP关闭连接.png)
+   ![1568820312811](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP关闭连接.png)
 
 1. 连接的主动关闭方，发送一个FIN。
 2. 被动方回复一个ACK。
@@ -198,7 +198,7 @@ TCP的四元组为源IP，源端口，目的IP，目的端口，**TCP首部中�
 
 算是一种很少出现的特殊情况，但是TCP也能支持，并建立一条正常的连接。
 
-​    ![](/home/chen/TCP同时打开.png)
+​    ![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP同时打开.png)
 
 <font size="1">我的画图软件不能支持斜线，只能靠盗图了</font>
 
@@ -214,7 +214,7 @@ TCP的四元组为源IP，源端口，目的IP，目的端口，**TCP首部中�
 
 ##### 同时关闭 
 
-  ![](/home/chen/Desktop/TCP同时关闭.png)
+  ![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP同时关闭.png)
 
 和同时打开差不多，**同时关闭是在收到对方的FIN之前，向对方发送了自己的FIN报文。**
 
@@ -240,7 +240,7 @@ TCP的四元组为源IP，源端口，目的IP，目的端口，**TCP首部中�
 
 ### 三、TCP的有限状态机
 
-![](/home/chen/Desktop/TCP有限状态机.png)
+![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/TCP有限状态机.png)
 
 上图即为《TCP/IP详解 卷一》中的原图。
 
@@ -424,7 +424,7 @@ DSACK只能在接收到重传的ACK之后才能判断此次是否是伪重传，
 
 ##### 失序
 
-包失序可能由IP协议或者链路状态引起，因为IP协议/home/chen/.config/Typora/typora-user-images/1569166769008.png不能保证包的有序发送，而且就算是有序发送但是在动态的网络中也不能保证包有序的到达接收端。
+包失序可能由IP协议或者链路状态引起，因为IP协议不能保证包的有序发送，而且就算是有序发送但是在动态的网络中也不能保证包有序的到达接收端。
 
 上文也有提到过，当接收到一个失序的报文时，接收端会立马响应一个ACK。
 
