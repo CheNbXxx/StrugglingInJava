@@ -296,7 +296,7 @@ MSL(Maximum Segment Lifetime)，也可以称为最大报文生存时间，**是�
 
 ### 四、TCP的重传机制
 
-TCP协议往下就是网络层的IP协议，但是IP协议并不提供任何可靠传输的服务，所以我们可以TCP所处的链路是不可靠的。
+TCP协议往下就是网络层的IP协议，但是IP协议并不提供任何可靠传输的服务，所以我们可以简单认为TCP所处链路都是不可靠的。
 
 但是TCP介绍中也说了，它提供的是**可靠的传输服务**，因此也就要求TCP协议自身来补足IP协议中的不可靠部分。
 
@@ -312,7 +312,7 @@ TCP协议往下就是网络层的IP协议，但是IP协议并不提供任何可�
 
 ##### 停止等待ARQ协议
 
- ![](C:\Users\bingxin.chen\Desktop\chen\github\StrugglingInJava\pic\20160313194700419.png)
+ ![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/%E5%81%9C%E6%AD%A2%E7%AD%89%E5%BE%85ARQ.png)
 
 **一个分组一个分组的发送，在收到确认之前不会发送下一个分组，如果出现超时就重传丢失分组。**
 
@@ -328,7 +328,7 @@ TCP协议往下就是网络层的IP协议，但是IP协议并不提供任何可�
 
 **在停止等待ARQ协议之上，每次发送多个报文，并等待这些分组的确认信息**
 
- ![](C:\Users\bingxin.chen\Desktop\chen\github\StrugglingInJava\pic\20160313194725494.png)
+ ![](https://chenbxxx.oss-cn-beijing.aliyuncs.com/%E8%BF%9E%E7%BB%ADARQ.png)
 
 连续ARQ协议虽然提高了信道利用率，但是仍然会存在**回退N**等问题。
 
@@ -635,7 +635,9 @@ TCP协议中，由**发送方维护**一个反映网络传输能力的的变量�
 
 
 
-  ![img](https://img-blog.csdn.net/20130801220438375?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvc2ljb2ZpZWxk/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
+拥塞控制的流程图：
+
+  ![img](https://chenbxxx.oss-cn-beijing.aliyuncs.com/%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6.jpg)
 
 
 

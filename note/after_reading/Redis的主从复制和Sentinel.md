@@ -234,7 +234,7 @@ run Id可以为`*`表示此次仅为客观下线检测，也可以为当前`Sent
 对于以上命令，接收的`Sentinel`会回复三个参数：
 
 1. `down_state`   -   目标主服务器下线状态，1为已下线，0为未下线
-2. `magnet:?xt=urn:btih:E77C42983C17467A7AE0373967D8013F79ED7E0B&dn=%5B44x.me%5DMIDD-962-Cleader_runid`  -   表示当前`Sentinel`选定的头节点的run id，`*`表示此次仅为客观下线检测
+2. `leader_runid`  -   表示当前`Sentinel`选定的头节点的run id，`*`表示此次仅为客观下线检测
 3. `leader_epoch`  -   表示选定的头节点的 epoch
 
 
@@ -258,7 +258,7 @@ Redis的选举算法是对`Raft算法`的具体实现。
 3. 每个`Sentinel`都有资格成为头节点。
 4. 每个发现客观下线的`SENTINEL`都会要求其他节点选举自己为头节点。
 5. 如果超过半数以上的`Sentinel`选了同一个`Sentinel`，那么选举成功，该`Sentinel`成为头节点。
-6. magnet:?xt=urn:btih:E77C42983C17467A7AE0373967D8013F79ED7E0B&dn=%5B44x.me%5DMIDD-962-Cmagnet:?xt=urn:btih:E77C42983C17467A7AE0373967D8013F79ED7E0B&dn=%5B44x.me%5DMIDD-962-C给定时限之内没有结果，则当前选举失败，开启下一轮选举。
+6. 给定时限之内没有结果，则当前选举失败，开启下一轮选举。
 7. `SENTINEL is-master-down-by-addr`作为`Sentinel`节点间的通信。
 
 
