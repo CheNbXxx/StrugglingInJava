@@ -1,4 +1,10 @@
-### Redis的主从复制模式
+- 最近真的是累啊，感觉好久没有早下班了。
+
+![image-20191109232700038](https://chenbxxx.oss-cn-beijing.aliyuncs.com/redis_sync_sentinel.png)
+
+<!--more-->
+
+### 一、Redis的主从复制模式
 
 Redis中可以通过`SLAVEOF <ip> <port>`指令或者配置文件`slavof <ip> <port>`的方式，让本服务器去复制另外一个服务器。
 
@@ -6,7 +12,9 @@ Redis中可以通过`SLAVEOF <ip> <port>`指令或者配置文件`slavof <ip> <p
 
 建立主从关系之后，从服务器不再(也不能)执行写命令，而是完全同步主服务器的数据(就算发现AOF或者RDB文件中有过期的键也不能删除，只能等主服务器的同步)。
 
-指令`info replication`，可以单独查看服务器此时的主从信息。
+指令`info replication`，可以单独查看服务器此时的主从信息。如下：
+
+![image-20191109232601445](https://chenbxxx.oss-cn-beijing.aliyuncs.com/redis_info_replication_master.png)
 
 该种主从复制模型非常适合读多写少的环境，而且仅从主服务器写入一定程度上也不需要担心数据一致性问题。
 
@@ -55,7 +63,7 @@ Sync本身命令效率就不高不说，在从服务器断线重连之后还需�
 
 为此在Redis2.8版本之后，新增加了一个`PSYNC`命令。
 
-`PSYNC`命令完整的形式是`PSYNC <runid> <offest?`
+`PSYNC`命令完整的形式是`PSYNC <runid> <offest>`
 
 
 
@@ -107,27 +115,17 @@ Sync本身命令效率就不高不说，在从服务器断线重连之后还需�
 
 对了，在复制流程开始前还还会判断主服务器的run ID，如果run ID与当前的服务器不匹配，则说明从服务器之前复制的是另外一台主服务器，则直接开始完整重同步。
 
-
-
-![image-20191109162111280](https://chenbxxx.oss-cn-beijing.aliyuncs.com/PSYNC%E6%B5%81%E7%A8%8B.png)
-
-
-
 **部分重同步就是发送积压缓冲区中从服务器复制偏移量之后的所有数据。**
 
 
 
-### Sentinel 哨兵模式
+### 二、 Sentinel 哨兵模式
 
 `Sentinel`是Redis的高可用解决方案，仅仅依靠主从复制在主服务器宕机之后就表示主服务器所在的整个模块都是只读状态(Redis不存在主主复制的模式)，无法写入或更新数据。
 
 `服务器Sentinel`就是指一个或者多个Sentinel服务器(Sentinel就是特殊的Redis服务器)组成Sentinel系统，并监视一个或多个的主服务器及其从服务器。
 
 在主服务器宕机时，激活故障转移功能，从该主服务器下的从服务器中选取一台作为新的主服务器，从而保证整个系统在短时间内恢复可用。
-
-
-
-#### Sentinel服务器
 
 `Sentinel`就是特殊的`Redis`服务器，和普通的`Redis`服务器共用一部分代码，但又有一套自己的数据结构和指令集(所以GET/SET等命令也就不可用)。
 
@@ -145,11 +143,15 @@ Sync本身命令效率就不高不说，在从服务器断线重连之后还需�
 
 至此`Sentinel`就有了包含主服务器的拓扑信息。
 
+
+
 ##### 2. 获取主/从服务器信息
 
 `Sentinel`会以**一定的频率**向所监视的主服务器发送`INFO`命令，来获取对应主服务器的消息。
 
 获取到的信息里面包括主从消息`Replication`，因此也就获取到了从服务器的信息。 
+
+
 
 ##### 3. 连接从服务器
 
@@ -158,6 +160,8 @@ Sync本身命令效率就不高不说，在从服务器断线重连之后还需�
 并按一定频率发送`INFO`命令，获取从服务器的具体信息。
 
 至此`Sentinel`的当前网络结构拓扑中新增了从服务器。
+
+
 
 ##### 4. 向订阅的所有主从服务器的`_sentinel:hello_`频道发送消息
 
@@ -171,15 +175,19 @@ PUBLIC _sentinel:hello_  "s_ip,s_port,s_runId,s_epoch,m_name,m_ip,m_port,m_epoch
 
 同样的消息是以一定的频率循环发送的。
 
+
+
 ##### 5. 接收`_sentinel:hello_`频道的消息
 
 通过频道的订阅，`Sentinel`会收到所有监视该主节点的其他`Sentinel`的消息。
 
 以此为根据`Sentinel`会在该主节点的数据实例中记录下所有监听他的`Sentinel`的相关信息。
 
+
+
 ##### 6. 和其他的`Sentinel`建立命令连接
 
-此时不会建立订阅连接。
+`Sentinel`之间不会建立订阅连接，仅仅只有命令连接。
 
 至此，`Sentinel`系统完整的拓扑图构造完成。
 
@@ -189,9 +197,7 @@ PUBLIC _sentinel:hello_  "s_ip,s_port,s_runId,s_epoch,m_name,m_ip,m_port,m_epoch
 
 和其他的`Sentinel`则是因为选主，不可能在失效之后每个`Sentinel`各自选择一个从服务器升为主服务器。
 
-
-
-![image-20191109190555460](https://chenbxxx.oss-cn-beijing.aliyuncs.com/Sentinel%E7%BB%93%E6%9E%84.png)
+![image-20191109233459918](https://chenbxxx.oss-cn-beijing.aliyuncs.com/Sentinel%E7%BB%93%E6%9E%84.png)
 
 
 
@@ -204,12 +210,12 @@ PUBLIC _sentinel:hello_  "s_ip,s_port,s_runId,s_epoch,m_name,m_ip,m_port,m_epoch
 有效返回有以下几种：
 
 1. `PONG`
-2. `LOADINGoport`
+2. `LOADING`
 3. `MASTERDOWN`
 
 如果对方服务器在`down-after-milliseconds`毫秒内(配置文件中指明)，没有返回一个有效返回，则当前服务器认定对方为主观下线，并修改实例对象中的状态。
 
-如果是从服务器，那么在修改完对象中的状态后，就不会有别的操作。
+**如果是从服务器，那么在修改完对象中的状态后，就不会有别的操作。**
 
 从服务器重新开启在线状态就需要通过`Sentinel`向其主服务器发送的`INFO`命令中的返回信息。
 
@@ -273,6 +279,10 @@ Redis的选举算法是对`Raft算法`的具体实现。
 
 `SLAVEOF NO ONE`并不一定能很快到达并执行，所以需要状态监控。
 
+![image-20191109233931424](https://chenbxxx.oss-cn-beijing.aliyuncs.com/redis_info_replication_slave.png)
+
+就是上图中的`role`字段从`slave`变为`master`，表示从服务器已经变为主服务器。
+
 **修改其他从服务器的复制目标**
 
 直接发送`SLAVEOF ip port`命令，将其他从服务器的复制目标指向新的主服务器
@@ -280,4 +290,3 @@ Redis的选举算法是对`Raft算法`的具体实现。
 **将旧主服务器降为从服务器**
 
 和第二步的发送命令不同，此时旧服务器可能还处于掉线状态并没办法接受到`SLAVEOF`命令，所以此处的修改仅仅在`Sentinel`内部的数据结构中。
-
