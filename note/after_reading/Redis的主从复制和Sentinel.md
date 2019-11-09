@@ -30,7 +30,7 @@ Redis中可以通过`SLAVEOF <ip> <port>`指令或者配置文件`slavof <ip> <p
 
 命令缓冲区会记录所有执行的写命令。
 
-![image-20191109154905723](/home/chen/.config/Typora/typora-user-images/image-20191109154905723.png)
+![image-20191109154905723](https://chenbxxx.oss-cn-beijing.aliyuncs.com/Redis_SYNC_%E6%B5%81%E7%A8%8B.png)
 
 BGSAVE执行完之后，会将生成的RDB文件发送给从服务器(此时如果于多个从服务器连接，RDB文件可以直接共享)。
 
@@ -109,7 +109,7 @@ Sync本身命令效率就不高不说，在从服务器断线重连之后还需�
 
 
 
-![image-20191109162111280](/home/chen/.config/Typora/typora-user-images/image-20191109162111280.png)
+![image-20191109162111280](https://chenbxxx.oss-cn-beijing.aliyuncs.com/PSYNC%E6%B5%81%E7%A8%8B.png)
 
 
 
@@ -191,7 +191,7 @@ PUBLIC _sentinel:hello_  "s_ip,s_port,s_runId,s_epoch,m_name,m_ip,m_port,m_epoch
 
 
 
-![image-20191109190555460](/home/chen/.config/Typora/typora-user-images/image-20191109190738129.png)
+![image-20191109190555460](https://chenbxxx.oss-cn-beijing.aliyuncs.com/Sentinel%E7%BB%93%E6%9E%84.png)
 
 
 
@@ -213,7 +213,7 @@ PUBLIC _sentinel:hello_  "s_ip,s_port,s_runId,s_epoch,m_name,m_ip,m_port,m_epoch
 
 从服务器重新开启在线状态就需要通过`Sentinel`向其主服务器发送的`INFO`命令中的返回信息。
 
-如果是主服务器则进入客观下线检测的流程。![image-20191109193524510](/home/chen/.config/Typora/typora-user-images/image-20191109193524510.png)
+如果是主服务器则进入客观下线检测的流程。
 
 
 
