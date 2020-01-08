@@ -46,42 +46,66 @@ public class BeanValidationBootStrap {
 
 - mainApplicationClass的推断过程很有意思，直接构造一个RuntimeException然后遍历异常的堆栈信息查找main方法，获取当前主类。
 
+```java
+	private Class<?> deduceMainApplicationClass() {
+		try {
+			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
+			for (StackTraceElement stackTraceElement : stackTrace) {
+				if ("main".equals(stackTraceElement.getMethodName())) {
+					return Class.forName(stackTraceElement.getClassName());
+				}
+			}
+		}
+		catch (ClassNotFoundException ex) {
+			// Swallow and continue
+		}
+		return null;
+	}
+```
+
+
+
 # Run方法
 
-- run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新等等。
+- run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新及后续处理等等。
 
 ```java
 	public ConfigurableApplicationContext run(String... args) {
         // StopWatch好像是用于记录时间
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
+        // 因为try...catch之外会用到，所以在外面先声明
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
         // Headless相关配置
 		configureHeadlessProperty();
-        // 获取SpringApplicationRunListeners
+        // 获取SpringApplicationRunListener，并封装为一个对象
 		SpringApplicationRunListeners listeners = getRunListeners(args)；
-         // 广播ApplicationStartingEvent
+         // 触发ApplicationStartingEvent
 		listeners.starting();
 		try {
             // 包装传入的应用参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
             // 准备容器环境
-            // 会触发ApplicationEnvironmentPreparedEvent
-            // 创建并配置Environment对象，并绑定到当前的应用上下文。
+            // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件
+            // 创建并配置Environment对象，并绑定到当前的应用上下文
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
             // 配置忽略的Bean信息
 			configureIgnoreBeanInfo(environment);
+            // 输出Banner
 			Banner printedBanner = printBanner(environment);
             // 创建对应的应用上下文
 			context = createApplicationContext();
             // 还是工厂加载模式，获取异常的报告之类的
 			exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
 					new Class[] { ConfigurableApplicationContext.class }, context);
-            // 准备上下文 传入了刚创建的上下文对象，环境，监听以及参数，还有banner
+            // 准备上下文 
 			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+            // 刷新上下文
 			refreshContext(context);
+            // 刷新上下文之后的操作
 			afterRefresh(context, applicationArguments);
+            // 计时结束
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
@@ -104,6 +128,53 @@ public class BeanValidationBootStrap {
 		return context;
 	}
 ```
+
+
+
+## 获取并启动监听器
+
+- Spring中的监听器采用的都是观察者模式。
+
+```java
+// SpringApplication	
+private SpringApplicationRunListeners getRunListeners(String[] args) {
+		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		return new SpringApplicationRunListeners(logger,
+				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
+	}
+
+    // SpringApplication	
+	private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
+        // 获取类加载器
+		ClassLoader classLoader = getClassLoader();
+        // 代码很熟悉，依旧是使用工厂加载模式获取spring.factories文件中配置的SpringApplicationRunListener子类实现
+		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
+		AnnotationAwareOrderComparator.sort(instances);
+		return instances;
+	}
+
+    // SpringApplication
+	private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
+			ClassLoader classLoader, Object[] args, Set<String> names) {
+		List<T> instances = new ArrayList<>(names.size());
+        // 按照获取的对象名称，遍历初始化
+		for (String name : names) {
+			try {
+				Class<?> instanceClass = ClassUtils.forName(name, classLoader);
+				Assert.isAssignable(type, instanceClass);
+				Constructor<?> constructor = instanceClass.getDeclaredConstructor(parameterTypes);
+				T instance = (T) BeanUtils.instantiateClass(constructor, args);
+				instances.add(instance);
+			} catch (Throwable ex) {
+				throw new IllegalArgumentException("Cannot instantiate " + type + " : " + name, ex);
+			}
+		}
+		return instances;
+	}
+```
+
+
 
 
 

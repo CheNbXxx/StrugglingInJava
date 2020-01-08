@@ -5,10 +5,36 @@
 - run方法中的环境准备只有一行代码，但是点开之后有点多的。
 
 ```java
-			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 ```
 
 
+
+## Environment类族
+
+严格来说应该是`PropertyResolver`类族，因为`Environment`继承自`PropertyResolver`。
+
+`PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
+
+以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
+
+以上是三个高级的接口抽象。
+
+简单了解就是Spring中的环境包含了键值对形式的Property以及Profiles(多环境的配置文件)。
+
+`AbstractEnvironment`中添加了保存两种属性的基本数据结构
+
+```java
+// AbstractEnvironment
+// 两种Profiles都是一LinkedHashSet保存的
+private final Set<String> activeProfiles = new LinkedHashSet<>();
+private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
+// PropertySource就是对k,v的一个包装，MutablePropertySources是对PropertySources集合的一个包装
+// mps里面包含一个CopyOrWriteList集合
+private final MutablePropertySources propertySources = new MutablePropertySources();
+```
+
+`AbstractPropertyResolver`则是属性解析的基类。
 
 <font size=2>（避免代码过多，非主要逻辑不贴代码）</font>
 
@@ -18,13 +44,14 @@
 // SpringApplication
 private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
       ApplicationArguments applicationArguments) {
-   // 获取或者创建容器环境
+    // 获取或者创建容器环境
     // SpringBoot中的容器环境使用Environment表示
    ConfigurableEnvironment environment = getOrCreateEnvironment();
     // 配置环境，创建之后根据传入参数对环境对象的配置
    configureEnvironment(environment, applicationArguments.getSourceArgs());
+    // 将资源本身封装成一个元素放在列表头,调用了两次暂时不知道具体作用
    ConfigurationPropertySources.attach(environment);
-    // 广播ApplicationEnvironmentPreparedEvent
+    // 触发ConfigFileApplicationListener，加载如application.yml的配置文件
    listeners.environmentPrepared(environment);
     // 将环境绑定到当前的容器上下文
    bindToSpringApplication(environment);
@@ -80,6 +107,8 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 }
 ```
 
+
+
 PropertySource的相关配置代码
 
 ```java
@@ -96,7 +125,7 @@ PropertySource的相关配置代码
 			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
             // 如果存在则加入到原命令行参数的集合中
 			if (sources.contains(name)) {
-				PropertySource<?> source = sources.get(name);
+				PropertySource<?> source = sources.get(namApplicationEnvironmentPreparedEvente);
 				CompositePropertySource composite = new CompositePropertySource(name);
 				composite.addPropertySource(
 						new SimpleCommandLinePropertySource("springApplicationCommandLineArgs", args));
@@ -137,6 +166,25 @@ PropertySource的相关配置代码
 
 
 
-## Environment类
+### 触发ApplicationEnvironmentPreparedEvent
 
- ![image-20200107000721924](/home/chen/.config/Typora/typora-user-images/image-20200107000721924.png)
+ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。
+
+
+
+### 绑定环境
+
+将准备好的容器环境绑定到当前的上下文。
+
+```java
+	protected void bindToSpringApplication(ConfigurableEnvironment environment) {
+		try {
+            // get方法是以environment为基准获取Binder对象
+            // Bindable.ofInstance(this)
+			Binder.get(environment).bind("spring.main", Bindable.ofInstance(this));
+		}
+		catch (Exception ex) {
+			throw new IllegalStateException("Cannot bind to SpringApplication", ex);
+		}
+	}
+```
