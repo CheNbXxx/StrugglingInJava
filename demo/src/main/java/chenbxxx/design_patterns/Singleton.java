@@ -1,7 +1,5 @@
 package chenbxxx.design_patterns;
 
-import lombok.Synchronized;
-
 /**
  * @author chen
  * @date 19-3-30
