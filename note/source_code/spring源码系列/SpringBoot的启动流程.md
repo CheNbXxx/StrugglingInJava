@@ -55,8 +55,7 @@ public class BeanValidationBootStrap {
 					return Class.forName(stackTraceElement.getClassName());
 				}
 			}
-		}
-		catch (ClassNotFoundException ex) {
+		}catch (ClassNotFoundException ex) {
 			// Swallow and continue
 		}
 		return null;

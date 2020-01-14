@@ -142,7 +142,8 @@ public static <T> List<T> loadFactories(Class<T> factoryType, @Nullable ClassLoa
 		for (String factoryImplementationName : factoryImplementationNames) {
 			result.add(instantiateFactory(factoryImplementationName, factoryType, classLoaderToUse));
 		}
-		AnnotationAwareOrderComparator.sort(result);
+		// 按照Order排序
+    	AnnotationAwareOrderComparator.sort(result);
 		return result;
 	}
 ```
@@ -166,6 +167,10 @@ return (T) ReflectionUtils.accessibleConstructor(factoryImplementationClass).new
 
 
 ## SpringBoot启动流程中的工厂加载机制
+
+- SpringBoot启动流程个中也会使用工厂加载机制加载一些类，但并不一定使用默认的构造函数，而是使用自定义的带参构造。
+
+
 
 ### SpringApplication
 
@@ -223,4 +228,6 @@ private SpringApplicationRunListeners getRunListeners(String[] args) {
 		return instances;
 	}
 ```
+
+
 
