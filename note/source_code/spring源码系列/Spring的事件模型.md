@@ -66,7 +66,9 @@ public SpringApplicationEvent(SpringApplication application, String[] args) {
 
 从构造函数中也可以看出，SpringApplicationEvent的事件源必须是SpringApplication，
 
-ApplicationContextEvent的事件源必须是ApplicationContext.
+而ApplicationContextEvent的事件源必须是ApplicationContext。
+
+一般来说应该是使用ApplicationContextEvent作为事件类型。
 
 
 
@@ -141,8 +143,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		ApplicationEvent applicationEvent;
 		if (event instanceof ApplicationEvent) {
 			applicationEvent = (ApplicationEvent) event;
-		}
-		else {
+		}else {
             // 包装为负载的应用事件
 			applicationEvent = new PayloadApplicationEvent<>(this, event);
             // 获取事件类型
@@ -151,11 +152,11 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 			}
 		}
 
-		// Multicast right now if possible - or lazily once the multicaster is initialized
-		if (this.earlyApplicationEvents != null) {
+        // earlyApplicationEvent是否为空表示是否需要收集再起的事件，
+        // 等事件初始化完成之后统一下发
+      	if (this.earlyApplicationEvents != null) {
 			this.earlyApplicationEvents.add(applicationEvent);
-		}
-		else {
+		}else {
              // 事件发布的主要流程 
 			getApplicationEventMulticaster().multicastEvent(applicationEvent, eventType);
 		}
@@ -164,8 +165,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		if (this.parent != null) {
 			if (this.parent instanceof AbstractApplicationContext) {
 				((AbstractApplicationContext) this.parent).publishEvent(event, eventType);
-			}
-			else {
+			}else {
 				this.parent.publishEvent(event);
 			}
 		}
@@ -227,6 +227,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		Object source = event.getSource();
 		Class<?> sourceType = (source != null ? source.getClass() : null);
          // 构建缓存的key，可以根据这个key获取map中的具体对象。
+         // 从此处可知Spring中用事务类型和事件源作为一个事务的唯一标识
 		ListenerCacheKey cacheKey = new ListenerCacheKey(eventType, sourceType);
 
 		// 从缓存中直接获取监听者集合
@@ -255,8 +256,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 				this.retrieverCache.put(cacheKey, retriever);
 				return listeners;
 			}
-		}
-		else {
+		}else {
 			// No ListenerRetriever caching -> no synchronization necessary
              // 没有监听器缓存的情况，没有同步代码的必要。
 			return retrieveApplicationListeners(eventType, sourceType, null);
@@ -280,6 +280,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		Set<ApplicationListener<?>> listeners;
 		Set<String> listenerBeans;
 		synchronized (this.retrievalMutex) {
+             // defaultsRetriever中的监听器会在初始化时从SpringApplication中导入
 			listeners = new LinkedHashSet<>(this.defaultRetriever.applicationListeners);
 			listenerBeans = new LinkedHashSet<>(this.defaultRetriever.applicationListenerBeans);
 		}
@@ -349,7 +350,7 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 
 
 
-##### 发布主逻辑
+##### 发布
 
 - 事件的发布就是获取所有监听者之后，再遍历调用监听者的公有接口方法。
 
@@ -416,9 +417,21 @@ public interface SpringApplicationRunListener {
 }
 ```
 
-
+/
 
 SpringApplicationRunListener在Spring框架内部的唯一实现就是EventPublishingRunListener。
+
+```java
+	public EventPublishingRunListener(SpringApplication application, String[] args) {
+		this.application = application;
+		this.args = args;
+		this.initialMulticaster = new SimpleApplicationEventMulticaster();
+        // 构造函数中会将当前的SpringApplications中的监听器导入到封装的广播器中
+		for (ApplicationListener<?> listener : application.getListeners()) {
+			this.initialMulticaster.addApplicationListener(listener);
+		}
+	}
+```
 
 EventPublishingRunListener作为SpringBoot启动过程中的事件相关工具类。
 
@@ -426,6 +439,8 @@ EventPublishingRunListener作为SpringBoot启动过程中的事件相关工具�
 
 ```java
 // ApplicationStartingEvent事件的发布
+// getRunListeneres方法中会初始化EventPublishingRunListener，
+// 以当前的SpringApplication为入参
 SpringApplicationRunListeners listeners = getRunListeners(args);
 listeners.starting();
 ```
@@ -539,6 +554,49 @@ public interface ErrorHandler {
 ```
 
 - 接收一个throwable类型的入参，void类型的返回，可以理解为方法中消化了这个异常。
+
+
+
+
+
+## 自定义监听器
+
+实现自定义的事件监听有两种方式
+
+1. @EventListener
+
+```java
+@Component
+@Scope("singleton")
+public class TestApplicationListener{
+    // 方法上标注EventListener就可以监听方法入参类型的事件
+    @EventListener
+    public void onApplicationEvent(ApplicationEvent event) {
+       ...
+    }
+}
+```
+
+2. 继承`ApplicationListener`或其子类
+
+```java
+// 实现ApplicationListener接口
+// 接口中的泛型类型就是想要监听的事件类型
+@Component
+@Scope("singleton")
+public class TestApplicationListener implements ApplicationListener<ContextRefreshedEvent>{
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+       ...
+    }
+}
+```
+
+
+
+- 两种方式都可以通过标注为Bean的方式使其生效。
+- 如果采用实现ApplicationListener接口的方法还可以使用工厂加载机制，在`spring.factories`中声明，在SpringApplication的构造函数中会获取所有ApplicationListener的方法。
+- 相对于标注为Bean的情况，工厂加载机制会更早的创建实例，如果监听的是ApplicationEvent，通过工程加载机制就能监听到refresh方法之前的事件。
 
 
 

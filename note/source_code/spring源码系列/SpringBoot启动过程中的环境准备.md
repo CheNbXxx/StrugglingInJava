@@ -16,13 +16,13 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 `PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
 
+Property可以简单理解为键值对属性，而Profiles则是有效的配置文件。
+
 以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
 
 以上是三个高级的接口抽象。
 
-简单了解就是Spring中的环境包含了键值对形式的Property以及Profiles(多环境的配置文件)。
-
-`AbstractEnvironment`中添加了保存两种属性的基本数据结构
+`AbstractEnvironment`中规定了保存两种属性的基本数据结构
 
 ```java
 // AbstractEnvironment
@@ -68,7 +68,7 @@ private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners
 
 ### 创建容器环境
 
-- ApplicationEnvironmentPreparedEvent方法逻辑并不难，根据主类不同会有不同的子类实现。
+- 根据不同的应用类型创建不同的环境类型。
 - 常用的servlet使用StandardservletEnvironment类作为环境。
 
 ```java
@@ -170,6 +170,10 @@ PropertySource的相关配置代码
 
 ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。
 
+此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
+
+逻辑有点复杂，记账，下次再说。
+
 
 
 ### 绑定环境
@@ -182,9 +186,21 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
             // get方法是以environment为基准获取Binder对象
             // Bindable.ofInstance(this)
 			Binder.get(environment).bind("spring.main", Bindable.ofInstance(this));
-		}
-		catch (Exception ex) {
+		}catch (Exception ex) {
 			throw new IllegalStateException("Cannot bind to SpringApplication", ex);
 		}
 	}
 ```
+
+点开好像还是很复杂，记账记账。
+
+
+
+## 总结
+
+`prepareEnvironment`方法的主要作用就是准备环境。
+
+1. 创建环境类实例
+2. 添加命令行参数等一些配置到实例中
+3. 触发`ApplicationEnvironmentPreparedEvent`，读取配置文件到环境中
+4. 将创建好的环境对象与当前的SpringApplication对象绑定

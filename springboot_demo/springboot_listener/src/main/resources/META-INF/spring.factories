@@ -1,1 +1,2 @@
-#org.springframework.boot.SpringApplicationRunListener=
+org.springframework.context.ApplicationListener=\
+  top.chenbxxx.listener.TestApplicationListener
