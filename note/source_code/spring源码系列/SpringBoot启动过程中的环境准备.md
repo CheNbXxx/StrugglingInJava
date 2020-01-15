@@ -172,8 +172,6 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
 
-逻辑有点复杂，记账，下次再说。
-
 
 
 ### 绑定环境
@@ -191,8 +189,6 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 		}
 	}
 ```
-
-点开好像还是很复杂，记账记账。
 
 
 
