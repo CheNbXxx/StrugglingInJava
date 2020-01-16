@@ -218,6 +218,11 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 
 ##### 获取所有监听者
 
+- 获取所有匹配监听者的方法逻辑在`AbstractApplicationEventMulticaster`中。
+
+- `AbstractApplicationEventMulticaster`中包装了监听者的缓存，**以eventType和sourceType唯一标识一组监听器**，这组监听器被封装为一个ListenerRetriever对象，并默认前置过滤不匹配的监听者。
+- `ListenerRetriever`是监听者的封装类，下文会分析该类。
+
 ```java
 	// AbstractApplicationEventMulticaster
 	// 获取所有的监听者集合，方法中就会排除不匹配的监听者。
@@ -263,9 +268,6 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		}
 	}
 ```
-
-- AbstractApplicationEventMulticaster中包装了监听者的缓存，**以eventType和sourceType唯一标识一组监听器**，这组监听器被封装为一个ListenerRetriever对象，并默认前置过滤不匹配的监听者。
-- `ListenerRetriever`是监听者的封装类，下文会分析该类。
 
 
 
@@ -347,6 +349,13 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 		return allListeners;
 	}
 ```
+
+ 获取流程如下：
+
+1. 以`eventType`和`sourceType`构造的key，从嗅探器缓存中获取，获取到就返回，
+2. 未获取时，进入
+
+
 
 
 

@@ -84,8 +84,8 @@ public class BeanValidationBootStrap {
             // 包装传入的应用参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
             // 准备容器环境
-            // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件
-            // 创建并配置Environment对象，并绑定到当前的应用上下文
+            // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件中的内容
+        	// 会将环境与当前的SpringApplication绑定
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
             // 配置忽略的Bean信息,`spring.beaninfo.ignore`配置项
 			configureIgnoreBeanInfo(environment);

@@ -10,13 +10,13 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 
 
-## Environment类族
+## PropertyResolver类族
 
-严格来说应该是`PropertyResolver`类族，因为`Environment`继承自`PropertyResolver`。
+ ![](C:\Users\TT\Desktop\PropertyResolver.jpg)
 
 `PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
 
-Property可以简单理解为键值对属性，而Profiles则是有效的配置文件。
+Property可以简单理解为键值对属性，而Profiles则是有效的配置文件，是Spring中的两种属性类型。
 
 以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
 
@@ -37,6 +37,8 @@ private final MutablePropertySources propertySources = new MutablePropertySource
 `AbstractPropertyResolver`则是属性解析的基类。
 
 <font size=2>（避免代码过多，非主要逻辑不贴代码）</font>
+
+
 
 ## prepareEnvironment方法
 
@@ -189,6 +191,12 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 		}
 	}
 ```
+
+
+
+### 方法返回的environment
+
+![image-20200116153717051](C:\Users\TT\AppData\Roaming\Typora\typora-user-images\image-20200116153717051.png)
 
 
 
