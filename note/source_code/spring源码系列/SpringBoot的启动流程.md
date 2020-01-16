@@ -19,16 +19,9 @@ public class BeanValidationBootStrap {
 
 # SpringApplication构造函数
 
-构造函数中完成了基本属性配置
-
-- primarySource为主类的类对象。
-- 使用工厂加载机制获取需要的ApplicationContextInitializer和ApplicationListener。
-- 推断Web类型以及主类对象。
-- Web类型有三种 - NONE，SERVLET，REACTIVE
-
 ```java
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
-        // 资源加载器
+        // 资源加载器,此处为null
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null";
          // 主要数据源集合
@@ -63,16 +56,22 @@ public class BeanValidationBootStrap {
 	}
 ```
 
-# Run方法
+
+
+- 配置主要资源
+- 推断web应用类型
+- 通过工厂加载机制加载应用上下文初始化器（ApplicationContextInitializer）和应用监听者（ApplicationListener）
+- 推断应用主类
+
+# Run()
 
 - run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新及后续处理等等。
 
 ```java
 	public ConfigurableApplicationContext run(String... args) {
-        // StopWatch好像是用于记录时间
+        // 用于记录时间，可以当做是秒表
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
-        // 因为try...catch之外会用到，所以在外面先声明
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
         // Headless相关配置
