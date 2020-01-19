@@ -8,6 +8,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.Arrays;
  * @author chenbxxx
  */
 @Slf4j
+@Component
 public class BeanFactoryPostProcessorAboutOrder9 implements BeanDefinitionRegistryPostProcessor, Ordered {
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         log.info("invoke {}",this.getClass().getSimpleName());

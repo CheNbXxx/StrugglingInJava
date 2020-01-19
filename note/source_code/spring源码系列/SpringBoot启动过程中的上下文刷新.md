@@ -230,16 +230,43 @@ protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 
 ## InvokeBeanFactoryPostProcessors
 
-1. beanFactory继承`BeanDefinitionRegistry`
-   1. 执行所有`BeanDefinitionRegistryPostProcessor`子类的`postProcessBeanDefinitionRegistry`方法
-   2. 按照是否是`BeanDefinitionRegistryPostProcessor`，划分为两类
+```java
+// AbstractApplicationContext
+protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+    	// 调用辅助类完成遍历调用
+		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
+
+		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime
+		// (e.g. through an @Bean method registered by ConfigurationClassPostProcessor)
+		if (beanFactory.getTempClassLoader() == null && beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
+			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
+			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
+		}
+	}
+```
+
+
+
+### PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors()
+
+- 调用`BeanFactoryPostProcessors`的辅助方法
+
+- 调用流程
+
+  1. 区分`beanFactory`是否继承`BeanDefinitionRegistry`，继承的话需要先执行所有的`BeanDefinitionRegistryPostProcessor`在执行其它的。
+
+     同为`BeanDefinitionRegistryPostProcessor`按照`PriorityOrder`，`Oredred`，其他的顺序执行。
+
+     顺带BeanFactory中的BeanFactory也会执行，
+
+  2. 
 
 ```java
 // PostProcessorRegistrationDelegate
 // 入参为创建的BeanFactory以及Context中注册的BeanFactoryPostProcessors
 public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
-
+·
     // Invoke BeanDefinitionRegistryPostProcessors first, if any.
     Set<String> processedBeans = new HashSet<>();
 
@@ -389,3 +416,4 @@ public static void invokeBeanFactoryPostProcessors(
 }
 ```
 
+ 

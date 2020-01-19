@@ -13,7 +13,7 @@ import top.chenbxxx.processor.factory.BeanFactoryPostProcessorAboutPriorityOrder
 public class AddBeanFactoryPostProcessorsInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     public void initialize(ConfigurableApplicationContext applicationContext) {
-        applicationContext.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorAboutOrder9());
+//        applicationContext.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorAboutOrder9());
         applicationContext.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorAboutOrder10());
         applicationContext.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorAboutPriorityOrdered9());
         applicationContext.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorAboutPriorityOrdered10());
