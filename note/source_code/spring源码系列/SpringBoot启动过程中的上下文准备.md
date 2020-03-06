@@ -46,9 +46,7 @@ private void prepareContext(ConfigurableApplicationContext context, Configurable
 		// 获取所有的属性包括primarySources和sources
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
-    	// 创建一个BeanDefinitionLoader，并按照sources类型分别做加载操作
 		load(context, sources.toArray(new Object[0]));
-    	// 发布ApplicationPreparedEvent
 		listeners.contextLoaded(context);
 	}
 ```
@@ -123,9 +121,6 @@ protected void postProcessApplicationContext(ConfigurableApplicationContext cont
 
 ## applyInitializers
 
-- 调用全部的`ApplicationContextInitializer`
-- 所有的`ApplicationContextInitializer`都是在`SpringApplication`的构造函数中通过工厂加载机制获取的。
-
 ```java
 // SpringApplication
 protected void applyInitializers(ConfigurableApplicationContext context) {
@@ -146,25 +141,7 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 }
 ```
 
-以下是Debug发现的7个`ApplicationContextInitializer`实现类
 
- ![image-20200117110430572](C:\Users\TT\AppData\Roaming\Typora\typora-user-images\image-20200117110430572.png)
-
-举例说明:
-
-1. `DelegatingApplicationContextInitializer`
-
-   获取环境属性中`context.initializer.classes`的`ApplicationContextInitializer`子类，并遍历执行。
-
-2. `ContextIdApplicationContextInitializer`
-
-   设置`contextId`，并向BeanFactory中注册一个`ContetxtId`的Bean对象。
-
-3. `SharedMetadataReaderFactoryContextInitializer`
-
-   添加一个`CachingMetadataReaderFactoryPostProcessor`的`BeanFactoryPostProcessor`。
-
-   
 
 ## 发布ApplicationContextInitializedEvent事件
 
@@ -193,8 +170,6 @@ public void contextPrepared(ConfigurableApplicationContext context) {
 ## Load(Application,Object[])
 
 ```java
-// SpringApplication
-// 入参为刚创建的应用上下文以及sources(包含primarySources和sources)
 protected void load(ApplicationContext context, Object[] sources) {
     if (logger.isDebugEnabled()) {
         logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
@@ -211,84 +186,9 @@ protected void load(ApplicationContext context, Object[] sources) {
     if (this.environment != null) {
         loader.setEnvironment(this.environment);
     }
-    // 遍历加载sources
     loader.load();
 }
-
-// SpringApplication
-// 从上下文中获取BeanDefinitionRegistry
-// 根据不同的类型有不同的获取方式
-private BeanDefinitionRegistry getBeanDefinitionRegistry(ApplicationContext context) {
-    if (context instanceof BeanDefinitionRegistry) {
-        return (BeanDefinitionRegistry) context;
-    }
-    if (context instanceof AbstractApplicationContext) {
-        return (BeanDefinitionRegistry) ((AbstractApplicationContext) context).getBeanFactory();
-    }
-    throw new IllegalStateException("Could not locate BeanDefinitionRegistry");
-}
-
-// SpringApplication
-protected BeanDefinitionLoader createBeanDefinitionLoader(BeanDefinitionRegistry registry, Object[] sources) {
-    return new BeanDefinitionLoader(registry, sources);
-}
-
-// BeanDefinitionLoader
-BeanDefinitionLoader(BeanDefinitionRegistry registry, Object... sources) {
-    Assert.notNull(registry, "Registry must not be null");
-    Assert.notEmpty(sources, "Sources must not be empty");
-    this.sources = sources;
-    // 初始化AnnotatedBeanDefinitionReader
-    this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
-    this.xmlReader = new XmlBeanDefinitionReader(registry);
-    if (isGroovyPresent()) {
-        this.groovyReader = new GroovyBeanDefinitionReader(registry);
-    }
-    this.scanner = new ClassPathBeanDefinitionScanner(registry);
-    this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
-}
-
 ```
 
 
 
-## contextLoaded
-
-- 发布`ApplicationPreparedEvent`事件
-- 另外在`EventPublishingRunListener`中可以看到一些额外处理：
-  - 如果`listener`继承`ApplicationContextAware`，那么此时就会吧`context`注入到`listener`中。
-  - 将`listener`添加到上下文中
-
-```java
-// SpringApplicationRunListeners
-void contextLoaded(ConfigurableApplicationContext context) {
-    for (SpringApplicationRunListener listener : this.listeners) {
-        listener.contextLoaded(context);
-    }
-}
-
-// EventPublishingRunListener
-@Override
-public void contextLoaded(ConfigurableApplicationContext context) {
-    for (ApplicationListener<?> listener : this.application.getListeners()) {
-        if (listener instanceof ApplicationContextAware) {
-            ((ApplicationContextAware) listener).setApplicationContext(context);
-        }
-        context.addApplicationListener(listener);
-    }
-    this.initialMulticaster.multicastEvent(new ApplicationPreparedEvent(this.application, this.args, context));
-}
-```
-
-
-
-# 总结
-
-上下文准备方法的主要作用：
-
-1. 将之前`SpringApplication`中的环境填充到上下文中
-2. 调用之前加载的`ApplicationContextInitializer`方法
-3. 发布`ApplicationContextInitializedEvent`
-4. 将命令行参数以及`banner`注册为Bean对象
-5. 创建BeanDefiniionLoader，并加载资源对象
-6. 发布ApplicationPreparedEvent，并将监听器对象添加到上下文中

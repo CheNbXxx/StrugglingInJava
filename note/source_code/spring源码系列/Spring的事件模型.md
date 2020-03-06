@@ -350,6 +350,13 @@ Spring中事务的发布流程主要在AbstractApplicationContext中。<font siz
 	}
 ```
 
+ 获取流程如下：
+
+1. 以`eventType`和`sourceType`构造的key，从嗅探器缓存中获取，获取到就返回，
+2. 未获取时，进入
+
+
+
 
 
 ##### 发布
