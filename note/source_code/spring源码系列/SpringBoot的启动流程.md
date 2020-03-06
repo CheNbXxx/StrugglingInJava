@@ -20,10 +20,11 @@ public class BeanValidationBootStrap {
 # SpringApplication构造函数
 
 ```java
-	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+// 直接点进来的话，这个ResourceLoader是null	
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
         // 资源加载器,此处为null
 		this.resourceLoader = resourceLoader;
-		Assert.notNull(primarySources, "PrimarySources must not be null";
+		Assert.notNull(primarySources, "PrimarySources must not be null");
          // 主要数据源集合
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
          // Web应用类型
@@ -56,8 +57,6 @@ public class BeanValidationBootStrap {
 	}
 ```
 
-
-
 - 配置主要资源
 - 推断web应用类型
 - 通过工厂加载机制加载应用上下文初始化器（ApplicationContextInitializer）和应用监听者（ApplicationListener）
@@ -76,7 +75,7 @@ public class BeanValidationBootStrap {
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
         // Headless相关配置
 		configureHeadlessProperty();
-        // 获取SpringApplicationRunListener，并封装为一个对象
+        // 工厂加载机制获取SpringApplicationRunListener，并封装为一个对象
 		SpringApplicationRunListeners listeners = getRunListeners(args)；
          // 触发ApplicationStartingEvent
 		listeners.starting();
@@ -226,7 +225,7 @@ private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] par
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
-		// 获取所有的配置，包含SpringApplication中的sources和primarySources
+		// 获取所有的配-置，包含SpringApplication中的sources和primarySources
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
 		load(context, sources.toArray(new Object[0]));
@@ -235,80 +234,6 @@ private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] par
 	}
 
 ```
-
-
-
-## 刷新上下文
-
-```java
-    // AbstractApplicationContext 
-    @Override
-	public void refresh() throws BeansException, IllegalStateException {
-		synchronized (this.startupShutdownMonitor) {
-			// Prepare this context for refreshing.
-			prepareRefresh();
-
-			// Tell the subclass to refresh the internal bean factory.
-			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
-
-			// Prepare the bean factory for use in this context.
-			prepareBeanFactory(beanFactory);
-
-			try {
-				// Allows post-processing of the bean factory in context subclasses.
-				postProcessBeanFactory(beanFactory);
-
-				// Invoke factory processors registered as beans in the context.
-				invokeBeanFactoryPostProcessors(beanFactory);
-
-				// Register bean processors that intercept bean creation.
-				registerBeanPostProcessors(beanFactory);
-
-				// Initialize message source for this context.
-				initMessageSource();
-
-				// Initialize event multicaster for this context.
-				initApplicationEventMulticaster();
-
-				// Initialize other special beans in specific context subclasses.
-				onRefresh();
-
-				// Check for listener beans and register them.
-				registerListeners();
-
-				// Instantiate all remaining (non-lazy-init) singletons.
-				finishBeanFactoryInitialization(beanFactory);
-
-				// Last step: publish corresponding event.
-				finishRefresh();
-			}
-
-			catch (BeansException ex) {
-				if (logger.isWarnEnabled()) {
-					logger.warn("Exception encountered during context initialization - " +
-							"cancelling refresh attempt: " + ex);
-				}
-
-				// Destroy already created singletons to avoid dangling resources.
-				destroyBeans();
-
-				// Reset 'active' flag.
-				cancelRefresh(ex);
-
-				// Propagate exception to caller.
-				throw ex;
-			}
-
-			finally {
-				// Reset common introspection caches in Spring's core, since we
-				// might not ever need metadata for singleton beans anymore...
-				resetCommonCaches();
-			}
-		}
-	}
-```
-
-
 
 # 补充
 

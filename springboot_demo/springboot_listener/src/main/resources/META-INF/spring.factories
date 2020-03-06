@@ -1,5 +1,0 @@
-#org.springframework.context.ApplicationListener=\
-#top.chenbxxx.listener.TestApplicationListener
-
-org.springframework.context.ApplicationContextInitializer=\
-top.chenbxxx.initializer.AddBeanFactoryPostProcessorsInitializer
