@@ -1,4 +1,4 @@
-# SpringBoot启动流程中的环境配置
+#  SpringBoot启动流程中的环境配置
 
 
 
@@ -14,7 +14,34 @@ listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublis
 
 
 
-### 创建容器环境
+
+
+### 环境准备
+
+```java
+	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
+			ApplicationArguments applicationArguments) {
+		// 创建环境类
+		ConfigurableEnvironment environment = getOrCreateEnvironment();
+        // 配置环境
+		configureEnvironment(environment, applicationArguments.getSourceArgs());
+		ConfigurationPropertySources.attach(environment);
+		listeners.environmentPrepared(environment);
+		bindToSpringApplication(environment);
+		if (!this.isCustomEnvironment) {
+			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
+					deduceEnvironmentClass());
+		}
+		ConfigurationPropertySources.attach(environment);
+		return environment;
+	}
+```
+
+
+
+
+
+### 创建环境类
 
 - 根据不同的应用类型创建不同的环境类型。
 - 常用的servlet使用StandardservletEnvironment类作为环境。
@@ -38,15 +65,36 @@ listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublis
 
 
 
-### 配置环境
+### Servlet的环境类
 
-- 配置创建的Environment对象
+Servlet的环境下,对应的配置环境类是StandardServletEnvironment.
+
+ ![image-20200329155324385](/home/chen/github/StrugglingInJava/pic/image-20200329155324385.png)
+
+超级接口就是`PropertyResolver`,它提供了key/value的属性访问.
+
+Environment继承了`PropertyResolver`,扩展了对properties和profiles的属性访问,保存了active的profiles.
+
+`ConfigurablePropertyResolver`则另外扩展了类型转换的需求.
+
+`StandardServletEnvironment`的基本属性:
+
+ ![image-20200329160858010](/home/chen/github/StrugglingInJava/pic/image-20200329160858010.png)
+
+propertySources是具体的属性类,每个类都标志的不同的读取位置.
+
+PropertyResolver则是属性解析器,里面定义了前后缀等内容.
+
+
+
+### 配置环境profiles
+
 - 主要包含Conversionservice，PropertySource以及Profiles的配置。
 
 ```java
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
 	if (this.addConversionService) {
-        // 获取共享的ApplicationConversionService对象
+        // 获取共享的ApplicationConversionService对象,双重检查的单例模式
      	// ConversionService是用于类型转换的接口
 		ConversionService conversionService = ApplicationConversionService.getSharedInstance();
 		environment.setConversionService((ConfigurableConversionService) conversionService);
@@ -55,6 +103,8 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 	configureProfiles(environment, args);
 }
 ```
+
+
 
 #### Profiles配置
 
@@ -131,6 +181,8 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
 
+ ![image-20200329162414503](/home/chen/github/StrugglingInJava/pic/image-20200329162414503.png)
+
 
 
 ### 绑定环境
@@ -151,41 +203,9 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 
 
-### 方法返回的environment
-
-![image-20200116153717051](C:\Users\TT\AppData\Roaming\Typora\typora-user-images\image-20200116153717051.png)
-
-## PropertyResolver类族
-
-`PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
-
-Property可以简单理解为键值对属性，而Profiles则是有效的配置文件，是Spring中的两种属性类型。
-
-以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
-
-以上是三个高级的接口抽象。
-
-`AbstractEnvironment`中规定了保存两种属性的基本数据结构
-
-```java
-// AbstractEnvironment
-// 两种Profiles都是一LinkedHashSet保存的
-private final Set<String> activeProfiles = new LinkedHashSet<>();
-private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
-// PropertySource就是对k,v的一个包装，MutablePropertySources是对PropertySources集合的一个包装
-// mps里面包含一个CopyOrWriteList集合
-private final MutablePropertySources propertySources = new MutablePropertySources();
-```
-
-`AbstractPropertyResolver`则是属性解析的基类。
-
-<font size=2>event（避免代码过多，非主要逻辑不贴代码）</font>
-
-
-
 ## 总结
 
-`prepareEnvironment`方法的主要作用就是准备环境。
+`prepareEnvironment`方法的主要作用就是准备环境,整合各个来源中的配置.
 
 1. 创建环境类实例
 2. 添加命令行参数等一些配置到实例中
