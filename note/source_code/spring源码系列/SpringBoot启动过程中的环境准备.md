@@ -69,7 +69,7 @@ listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublis
 
 Servlet的环境下,对应的配置环境类是StandardServletEnvironment.
 
- ![image-20200329155324385](/home/chen/github/StrugglingInJava/pic/image-20200329155324385.png)
+ ![image-20200329155324385](../../../pic/image-20200329155324385.png)
 
 超级接口就是`PropertyResolver`,它提供了key/value的属性访问.
 
@@ -79,7 +79,7 @@ Environment继承了`PropertyResolver`,扩展了对properties和profiles的属�
 
 `StandardServletEnvironment`的基本属性:
 
- ![image-20200329160858010](/home/chen/github/StrugglingInJava/pic/image-20200329160858010.png)
+ ![image-20200329160858010](../../../pic/image-20200329160858010.png)
 
 propertySources是具体的属性类,每个类都标志的不同的读取位置.
 
@@ -181,7 +181,7 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
 
- ![image-20200329162414503](/home/chen/github/StrugglingInJava/pic/image-20200329162414503.png)
+ ![image-20200329162414503](../../../pic/image-20200329162414503.png)
 
 
 
