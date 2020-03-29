@@ -192,8 +192,6 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 	}
 ```
 
-
-
 #### 事件发布
 
 `multicastEvent`是最终广播的方法，Spring中提供了`SimpleApplicationEventMulticaster`作为默认实现。
@@ -216,8 +214,6 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 		}
 	}
 ```
-
-
 
 ##### 获取所有监听者
 
@@ -418,43 +414,41 @@ private void doInvokeListener(ApplicationListener listener, ApplicationEvent eve
 
 ## SpringBoot启动过程中的事件
 
-首先所有在SpringBoot启动过程中的事件发布，最上层方法调用都来自`SpringApplicationRunListeners`，该类就是`SpringApplicationRunListener`的一个集合。
+SpringBoot启动时,在初始化SpringApplication时就会通过工厂加载机制获取并保存所有的`ApplicationListener`实现.
+
+另外的run方法中会对这些ApplicationListener进行包装.
+
+```java
+private SpringApplicationRunListeners getRunListeners(String[] args) {
+    Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+    return new SpringApplicationRunListeners(logger,
+                                             // 通过工厂加载机制获取所有的SpringApplicationRunListener子类实现,
+                                             // 在spring.factory中标注的
+                                             getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
+}
+```
+
+SpringApplicationRunListeners是对SpringApplicationRunListener的简单封装,是最上层的发布类.
 
 ```java
 class SpringApplicationRunListeners {
 	private final Log log;
-    // 以一个简单List的形式存放所有的SpringApplicationRunListener
+	// List...再简单不过的封装方式
 	private final List<SpringApplicationRunListener> listeners;
-    ...
-```
-
-事件发布过程也很简单
-
-```java
-// SpringApplication
-// ApplicationStartingEvent事件的发布
-// getRunListeneres方法中会初始化EventPublishingRunListener，
-// 以当前的SpringApplication为入参
-SpringApplicationRunListeners listeners = getRunListeners(args);
-listeners.starting();
-
-// SpringApplicationRunListeners
-public void starting() {
-    // 遍历调用，简单粗暴
-    for (SpringApplicationRunListener listener : this.listeners) {
-		listener.starting();	
+  	// 发布方式就是通过for循环调用List的发布器发布.
+    void starting() {
+        for (SpringApplicationRunListener listener : this.listeners) {
+            listener.starting();
+        }
     }
 }
 ```
 
-
-
-### SpringApplicationRunListener
-
-- SpringBoot启动过程中，也会触发很多的事件，区别于我们自定义的事件发布，Spring启动流程中的事件发布的顶级接口为`SpringApplicationRunListener`。
+对于SpringApplicationRunListener,其内部定义了SpringApplication启动过程中所有的事件发布的方法.
 
 ```java
-// 接口中包含了容器启动各个流程状态的触发方法
+// 或许可以理解为一种规范,在SpringBoot的启动过程中必然会有以下的事件.
+// 我们如果想要实现自己的启动过程监听也要实现如下的方法.
 // 具体的实现包含在子类EventPublishingRunListener中
 public interface SpringApplicationRunListener {
     // 容器启动 cubao
@@ -474,27 +468,26 @@ public interface SpringApplicationRunListener {
 }
 ```
 
-在Run方法中会通过工厂加载模式加载所有的`SpringApplicationRunListener`，并全部封装在`SpringApplicationRunListeners`中。
+getApplicationListeners(event, type)而在SpringBoot中,它的默认实现只有EventPublishingRunListener,它通过对另外一种发布器的调用实现事件的发布.
 
-SpringApplicationRunListener在Spring框架内部的唯一实现就是EventPublishingRunListener。
-
-EventPublishRunListener中封装了`SimpleApplicationEventMulticaster`。
-
-`SimpleApplicationEventMulticaster`是Spring中默认的事件发布器的实现，`AbstractApplicationContext`内部也有该引用，借此实现事件的发布。
-
-EventPublishingRunListener作为SpringBoot启动过程中的事件相关工具类。
+EventPublishingRunListener的构造函数如下:
 
 ```java
-	public EventPublishingRunListener(SpringApplication application, String[] args) {
-		this.application = application;
-		this.args = args;
-		this.initialMulticaster = new SimpleApplicationEventMulticaster();
-        // 构造函数中会将当前的SpringApplications中的监听器导入到封装的广播器中
-		for (ApplicationListener<?> listener : application.getListeners()) {
-			this.initialMulticaster.addApplicationListener(listener);
-		}
-	}
+public EventPublishingRunListener(SpringApplication application, String[] args) {
+    this.application = application;
+    this.args = args;
+    // 定义一个事件发布器
+    this.initialMulticaster = new SimpleApplicationEventMulticaster();
+    // 可以看到这里已经把SpringApplication中的所有监听器填充到SpringApplicationRunListeners中了.
+    for (ApplicationListener<?> listener : application.getListeners()) {
+        this.initialMulticaster.addApplicationListener(listener);
+    }
+}
 ```
+
+初始化的结果就是一个SpringApplicationRunListeners对象,持有所有的SpringApplicationRunListener子类的引用集合.
+
+而默认的发布逻辑都是在EventPublishingRunListener中实现的.
 
 
 
@@ -600,7 +593,7 @@ public class TestApplicationListener{
 // 接口中的泛型类型就是想要监听的事件类型
 @Component
 @Scope("singleton")
-public class TestApplicationListener implements App发布的流程很简单就是获取监听器并调用实现的接口方法。licationListener<ContextRefreshedEvent>{
+public class TestApplicationListener implements ApplicationListener<ContextRefreshedEvent>{
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
        ...

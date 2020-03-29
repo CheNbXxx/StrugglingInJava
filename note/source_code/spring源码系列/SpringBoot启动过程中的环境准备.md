@@ -8,63 +8,9 @@
 ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 ```
 
+传入的ApplicationArguments包含了main方法中参数以及命令行参数.
 
-
-## PropertyResolver类族
-
- ![](C:\Users\TT\Desktop\PropertyResolver.jpg)
-
-`PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
-
-Property可以简单理解为键值对属性，而Profiles则是有效的配置文件，是Spring中的两种属性类型。
-
-以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
-
-以上是三个高级的接口抽象。
-
-`AbstractEnvironment`中规定了保存两种属性的基本数据结构
-
-```java
-// AbstractEnvironment
-// 两种Profiles都是一LinkedHashSet保存的
-private final Set<String> activeProfiles = new LinkedHashSet<>();
-private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
-// PropertySource就是对k,v的一个包装，MutablePropertySources是对PropertySources集合的一个包装
-// mps里面包含一个CopyOrWriteList集合
-private final MutablePropertySources propertySources = new MutablePropertySources();
-```
-
-`AbstractPropertyResolver`则是属性解析的基类。
-
-<font size=2>（避免代码过多，非主要逻辑不贴代码）</font>
-
-
-
-## prepareEnvironment方法
-
-```java
-// SpringApplication
-private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
-      ApplicationArguments applicationArguments) {
-    // 获取或者创建容器环境
-    // SpringBoot中的容器环境使用Environment表示
-   ConfigurableEnvironment environment = getOrCreateEnvironment();
-    // 配置环境，创建之后根据传入参数对环境对象的配置
-   configureEnvironment(environment, applicationArguments.getSourceArgs());
-    // 将资源本身封装成一个元素放在列表头,调用了两次暂时不知道具体作用
-   ConfigurationPropertySources.attach(environment);
-    // 触发ConfigFileApplicationListener，加载如application.yml的配置文件
-   listeners.environmentPrepared(environment);
-    // 将环境绑定到当前的容器上下文
-   bindToSpringApplication(environment);
-   if (!this.isCustomEnvironment) {
-      environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
-            deduceEnvironmentClass());
-   }
-   ConfigurationPropertySources.attach(environment);
-   return environment;
-}
-```
+listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublishingRunListener,用来广播事件.
 
 
 
@@ -78,7 +24,8 @@ private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners
 		if (this.environment != null) {
 			return this.environment;
 		}
-		switch (this.webApplicationType) {
+        // 简单switch
+        switch (this.webApplicationType) {
 		case SERVLET:
 			return new StandardServletEnvironment();
 		case REACTIVE:
@@ -100,7 +47,7 @@ private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
 	if (this.addConversionService) {
         // 获取共享的ApplicationConversionService对象
-        // 使用的双重校验的
+     	// ConversionService是用于类型转换的接口
 		ConversionService conversionService = ApplicationConversionService.getSharedInstance();
 		environment.setConversionService((ConfigurableConversionService) conversionService);
 	}
@@ -109,9 +56,19 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 }
 ```
 
+#### Profiles配置
+
+```java
+	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
+		Set<String> profiles = new LinkedHashSet<>(this.additionalProfiles);
+		profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
+		environment.setActiveProfiles(StringUtils.toStringArray(profiles));
+	}
+```
 
 
-PropertySource的相关配置代码
+
+#### PropertySource配置
 
 ```java
 	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
@@ -197,6 +154,32 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 ### 方法返回的environment
 
 ![image-20200116153717051](C:\Users\TT\AppData\Roaming\Typora\typora-user-images\image-20200116153717051.png)
+
+## PropertyResolver类族
+
+`PropertyResolver`提供了对Property属性的访问方式，`Environment`在此基础上提供了对Profiles属性的访问。
+
+Property可以简单理解为键值对属性，而Profiles则是有效的配置文件，是Spring中的两种属性类型。
+
+以上两个接口提供了getter方法，另外和`Environment`同级的`ConfigurablePropertyResolver`，提供了对一些属性的setter方法，类型转换的功能。
+
+以上是三个高级的接口抽象。
+
+`AbstractEnvironment`中规定了保存两种属性的基本数据结构
+
+```java
+// AbstractEnvironment
+// 两种Profiles都是一LinkedHashSet保存的
+private final Set<String> activeProfiles = new LinkedHashSet<>();
+private final Set<String> defaultProfiles = new LinkedHashSet<>(getReservedDefaultProfiles());
+// PropertySource就是对k,v的一个包装，MutablePropertySources是对PropertySources集合的一个包装
+// mps里面包含一个CopyOrWriteList集合
+private final MutablePropertySources propertySources = new MutablePropertySources();
+```
+
+`AbstractPropertyResolver`则是属性解析的基类。
+
+<font size=2>event（避免代码过多，非主要逻辑不贴代码）</font>
 
 
 

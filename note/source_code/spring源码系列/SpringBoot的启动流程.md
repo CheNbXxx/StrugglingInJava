@@ -3,10 +3,9 @@
 - 尽量不会有太多的代码，以理清楚流程为主
 - 因为一行代码点进去可能就是几百几千行代码，一次分析完太累了。
 
-# 启动类调用
+## 启动类调用
 
 ```java
-
 @SpringBootApplication
 public class BeanValidationBootStrap {
     public static void main(String[] args) {
@@ -17,7 +16,7 @@ public class BeanValidationBootStrap {
 
 以上是最基础的启动类代码，调用SpringApplication的静态方法run启动Spring的整个容器。
 
-# SpringApplication构造函数
+## SpringApplication构造函数
 
 ```java
 // 直接点进来的话，这个ResourceLoader是null	
@@ -39,30 +38,41 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 	}
 ```
 
-- mainApplicationClass的推断过程很有意思，直接构造一个RuntimeException然后遍历异常的堆栈信息查找main方法，获取当前主类。
+### 初始化器
+
+ApplicationContextInitializer的实现子类:
+
+ ![image-20200329145817718](/home/chen/github/StrugglingInJava/pic/image-20200329145817718.png)
+
+ServerPortInfoApplicationContextInitializer 会直接添加一个WebServerInitializedEvent的监听
+
+### 监听器
+
+ ![image-20200329145919656](/home/chen/github/StrugglingInJava/pic/image-20200329145919656.png)
+
+其中最为关键的应该就是ConfigFileApplicationListener,会响应ApplicationEnvironmentPreparedEvent和ApplicationPreparedEvent事件,加载各类配置文件.
+
+### 推断主类
+
+mainApplicationClass的推断过程很有意思，直接构造一个RuntimeException然后遍历异常的堆栈信息查找main方法，获取当前主类。
 
 ```java
-	private Class<?> deduceMainApplicationClass() {
-		try {
-			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
-			for (StackTraceElement stackTraceElement : stackTrace) {
-				if ("main".equals(stackTraceElement.getMethodName())) {
-					return Class.forName(stackTraceElement.getClassName());
-				}
-			}
-		}catch (ClassNotFoundException ex) {
-			// Swallow and continue
-		}
-		return null;
-	}
+...
+    try {
+        StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
+        for (StackTraceElement stackTraceElement : stackTrace) {
+            if ("main".equals(stackTraceElement.getMethodName())) {
+                return Class.forName(stackTraceElement.getClassName());
+            }
+        }
+ ...
 ```
 
-- 配置主要资源
-- 推断web应用类型
-- 通过工厂加载机制加载应用上下文初始化器（ApplicationContextInitializer）和应用监听者（ApplicationListener）
-- 推断应用主类
 
-# Run()
+
+---
+
+# Run()方法
 
 - run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新及后续处理等等。
 
@@ -80,7 +90,7 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
          // 触发ApplicationStartingEvent
 		listeners.starting();
 		try {
-            // 包装传入的应用参数
+            // 对main方法的入参进行包装
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
             // 准备容器环境
             // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件中的内容
@@ -121,7 +131,7 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 			handleRunFailure(context, ex, exceptionReporters, null);
 			throw new IllegalStateException(ex);
 		}
-		return context;
+		return context;args
 	}
 ```
 
@@ -129,47 +139,53 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 
 ## 获取并启动监听器
 
-- Spring中的监听器采用的都是观察者模式。
-- 此时会创建`EventPublishingRunListener`实例，并将`SpringApplication`中的Listeners导入到期内的广播器中。
-
 ```java
-// SpringApplication	
+SpringApplicationRunListeners listeners = getRunListeners(args)；
+      
 private SpringApplicationRunListeners getRunListeners(String[] args) {
     Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
     return new SpringApplicationRunListeners(logger,
                                              getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
 }
+```
 
-// SpringApplication	
-private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
-    // 获取类加载器
-    ClassLoader classLoader = getClassLoader();
-    // 代码很熟悉，依旧是使用工厂加载模式获取spring.factories文件中配置的SpringApplicationRunListener子类实现
-    Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
-    List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
-    AnnotationAwareOrderComparator.sort(instances);
-    return instances;
-}
+Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`的特殊工具类发布.
 
-// SpringApplication
-private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
-                                                   ClassLoader classLoader, Object[] args, Set<String> names) {
-    List<T> instances = new ArrayList<>(names.size());
-    // 按照获取的对象名称，遍历初始化
-    for (String name : names) {
-        try {
-            Class<?> instanceClass = ClassUtils.forName(name, classLoader);
-            Assert.isAssignable(type, instanceClass);
-            Constructor<?> constructor = instanceClass.getDeclaredConstructor(parameterTypes);
-            T instance = (T) BeanUtils.instantiateClass(constructor, args);
-            instances.add(instance);
-        } catch (Throwable ex) {
-            throw new IllegalArgumentException("Cannot instantiate " + type + " : " + name, ex);
-        }
+`SpringApplicationRunListeners`内部封装了Log对象和`SpringApplicationRunListener`的集合.
+
+`SpringApplicationRunListener`是对启动过程中事件发布的规范接口,定义了各种相关事件.
+
+默认的实现只有`EventPublishingRunListener`.
+
+```java
+// EventPublishingRunListener的构造函数
+public EventPublishingRunListener(SpringApplication application, String[] args) {
+    this.application = application;
+    this.args = args;
+    this.initialMulticaster = new SimpleApplicationEventMulticaster();
+    for (ApplicationListener<?> listener : application.getListeners()) {
+        this.initialMulticaster.addApplicationListener(listener);
     }
-    return instances;
 }
 ```
+
+从构造函数也可以看出,`EventPublishingRunListener`就是对广播器的一个封装,事件广播最终还是会通过`SimpleApplicationEventMulticaster`.
+
+
+
+## 发布ApplicationStartingEvent
+
+该事件涉及的监听器有以下四个:
+
+ ![image-20200329152842427](/home/chen/github/StrugglingInJava/pic/image-20200329152842427.png)
+
+具体作用先忽略.
+
+
+
+## 环境准备
+
+[SpringBoot启动过程中的环境准备](./SpringBoot启动过程中的环境准备)
 
 
 
@@ -235,7 +251,7 @@ private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] par
 
 ```
 
-# 补充
+# 
 
 ## 1.ApplicationContextInitializer  -  引用上下文初始化
 
