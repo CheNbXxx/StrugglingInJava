@@ -1,9 +1,16 @@
 # SpringBoot的启动流程概述
 
 - 尽量不会有太多的代码，以理清楚流程为主
-- 因为一行代码点进去可能就是几百几千行代码，一次分析完太累了。
 
-## 启动类调用
+<!-- more -->
+
+---
+
+[TOC]
+
+
+
+## BootStrap调用
 
 ```java
 @SpringBootApplication
@@ -14,7 +21,7 @@ public class BeanValidationBootStrap {
 }
 ```
 
-以上是最基础的启动类代码，调用SpringApplication的静态方法run启动Spring的整个容器。
+以上是最基础的Spring应用启动代码，调用SpringApplication的静态方法run启动Spring的整个容器。
 
 ## SpringApplication构造函数
 
@@ -28,7 +35,7 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
          // Web应用类型
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
-         // 设置初始化器
+         // 设置初始化器,具体有哪些看下文
 	     setInitializers(
             (Collection)getSpringFactoriesInstances(ApplicationContextInitializer.class));
           // 设置监听者
@@ -42,13 +49,13 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 
 ApplicationContextInitializer的实现子类:
 
- ![image-20200329145817718](/home/chen/github/StrugglingInJava/pic/image-20200329145817718.png)
+ ![image-20200329145817718](../../../pic/image-20200329145817718.png)
 
 ServerPortInfoApplicationContextInitializer 会直接添加一个WebServerInitializedEvent的监听
 
 ### 监听器
 
- ![image-20200329145919656](/home/chen/github/StrugglingInJava/pic/image-20200329145919656.png)
+ ![image-20200329145919656](../../../pic/image-20200329145919656.png)
 
 其中最为关键的应该就是ConfigFileApplicationListener,会响应ApplicationEnvironmentPreparedEvent和ApplicationPreparedEvent事件,加载各类配置文件.
 
@@ -72,7 +79,7 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 
 ---
 
-# Run()方法
+## Run()方法
 
 - run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新及后续处理等等。
 
@@ -137,9 +144,28 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 
 
 
-## 获取并启动监听器
+### 1. 配置Headless
 
 ```java
+private static final String SYSTEM_PROPERTY_JAVA_AWT_HEADLESS = "java.awt.headless";
+
+private void configureHeadlessProperty() {
+    	// System的相关配置 
+		System.setProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS,
+				System.getProperty(SYSTEM_PROPERTY_JAVA_AWT_HEADLESS, Boolean.toString(this.headless)));
+}
+```
+
+Headless模式是应用的一种配置模式。
+
+在服务器可能缺少显示设备、键盘、鼠标等外设的情况下可以使用这种模式。
+
+
+
+### 2. 获取并启动监听器
+
+```java
+// SpringApplication
 SpringApplicationRunListeners listeners = getRunListeners(args)；
       
 private SpringApplicationRunListeners getRunListeners(String[] args) {
@@ -149,7 +175,7 @@ private SpringApplicationRunListeners getRunListeners(String[] args) {
 }
 ```
 
-Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`的特殊工具类发布.
+**Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`的特殊工具类发布.**
 
 `SpringApplicationRunListeners`内部封装了Log对象和`SpringApplicationRunListener`的集合.
 
@@ -171,21 +197,23 @@ public EventPublishingRunListener(SpringApplication application, String[] args) 
 
 从构造函数也可以看出,`EventPublishingRunListener`就是对广播器的一个封装,事件广播最终还是会通过`SimpleApplicationEventMulticaster`.
 
+详细的可以看[Spring的事件模型](./Spring的事件模型.md#SpringBoot启动过程中的事件)
 
-
-## 发布ApplicationStartingEvent
+### 3. 发布ApplicationStartingEvent
 
 该事件涉及的监听器有以下四个:
 
- ![image-20200329152842427](/home/chen/github/StrugglingInJava/pic/image-20200329152842427.png)
+ ![image-20200329152842427](../../../pic/image-20200329152842427.png)
 
 具体作用先忽略.
 
 
 
-## 环境准备
+### 4. 创建并准备环境
 
-[SpringBoot启动过程中的环境准备](./SpringBoot启动过程中的环境准备)
+创建环境容器,并加载
+
+[SpringBoot启动过程中的环境准备](./SpringBoot启动过程中的环境准备.md)
 
 
 

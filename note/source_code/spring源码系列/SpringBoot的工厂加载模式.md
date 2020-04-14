@@ -4,9 +4,13 @@
 
 - 工厂加载机制是`SpringBoot`的扩展点之一，首先`META-INF/spring.factories` 路径下配置相关子类，而且在框架运行中借由`SpringFactoriesLoader`加载到框架的上下文，实现自定义扩展。
 
-
+<!-- more -->
 
 ---
+
+[TOC]
+
+
 
 ## spring.factories文件
 
@@ -37,7 +41,7 @@ public static final String FACTORIES_RESOURCE_LOCATION = "META-INF/spring.factor
 private static final Log logger = LogFactory.getLog(SpringFactoriesLoader.class);
 // 缓存，第一遍读取配置文件时，所有的k/v对都会放在cache中，不需要重复读文件。
 // 以ClassLoader为key，value最终是LinkedMultiValueMap结构
-	private static final Map<ClassLoader, MultiValueMap<String, String>> cache = new ConcurrentReferenceHashMap<>();
+private static final Map<ClassLoader, MultiValueMap<String, String>> cache = new ConcurrentReferenceHashMap<>();
 ```
 
 

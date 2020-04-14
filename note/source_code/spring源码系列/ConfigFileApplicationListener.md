@@ -1,6 +1,8 @@
 ## ApplicationEnvironmentPreparedEvent
 
-- 妈的 太多Java8的Lambda表达式了看起来头好痛
+- 太多Java8的Lambda表达式了看起来头好痛
+
+  
 
 
 
@@ -24,7 +26,7 @@
 
 Debug时自带的`EnvironmentPostProcessor`
 
- ![image-20200329203541928](/home/chen/github/StrugglingInJava/pic/image-20200329203541928.png)
+ ![image-20200329203541928](../../../pic/image-20200329203541928.png)
 
 SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的系统属性.
 
@@ -55,15 +57,16 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 1. 添加一个随机数到配置中`environment.propertySource`
 2. 加载本地配置文件.
-3. 
+
+   
 
 #### 随机数的作用
 
 添加的随机数如下:
 
- ![image-20200329205301295](/home/chen/github/StrugglingInJava/pic/image-20200329205301295.png)
+ ![image-20200329205301295](../../../pic/image-20200329205301295.png)
 
- ![image-20200329205230168](/home/chen/github/StrugglingInJava/pic/image-20200329205230168.png)
+ ![image-20200329205230168](../../..//pic/image-20200329205230168.png)
 
 上面就是RandomValuePropertySource的类注释.
 
@@ -90,7 +93,7 @@ Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
 
 获取到的两个PropertySourceLoader
 
- ![image-20200329205729718](/home/chen/github/StrugglingInJava/pic/image-20200329205729718.png)
+ ![image-20200329205729718](../../../pic/image-20200329205729718.png)
 
 
 

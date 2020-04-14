@@ -8,25 +8,73 @@
 ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 ```
 
-传入的ApplicationArguments包含了main方法中参数以及命令行参数.
+入参包括以下:
+
+applicationArguments包含了main方法中参数以及命令行参数.
 
 listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublishingRunListener,用来广播事件.
 
+<!-- more -->
+
+---
 
 
 
+[TOC]
 
-### 环境准备
+
+
+## 方法概述
+
+方法的主要目的就是加载各种环境配置,并返回一个`ConfigurableEnvironment`.
+
+首先明确返回的`ConfigurableEnvironment`指的是什么.
+
+### Servlet的环境类
+
+Servlet的环境下,对应的配置环境类是StandardServletEnvironment.
+
+ ![image-20200329155324385](../../../pic/image-20200329155324385.png)
+
+StandardServletEnvironment继承关系中
+
+最上层的接口就是`PropertyResolver`,它提供了key/value的属性访问.
+
+ ![image-20200414221834267](../../../pic/image-20200414221834267.png)
+
+`Environment`接口扩展了对properties和profiles的属性访问,保存了active的profiles.
+
+ ![image-20200414221802882](../../../pic/image-20200414221802882.png)
+
+`ConfigurablePropertyResolver`则另外扩展了类型转换的需求.
+
+ ![image-20200414221902918](../../../pic/image-20200414221902918.png)
+
+接下来的一些接口就是对以上的整合和扩展,具体不细说了.
+
+以下是`StandardServletEnvironment`的基本属性:
+
+ ![image-20200329160858010](../../../pic/image-20200329160858010.png)
+
+propertySources是具体的属性类,每个类都标志的不同的读取位置.
+
+PropertyResolver则是属性解析器,里面定义了前后缀等内容.
+
+
+
+## 主函数
 
 ```java
-	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
+	privTOCate ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
-		// 创建环境类
+		// 获取或创建环境类,一样会根据不同的应用类型创建不同的环境容器类.
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
         // 配置环境
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
 		ConfigurationPropertySources.attach(environment);
+        // 发布ApplicationEnvironmentPreparedEvent
 		listeners.environmentPrepared(environment);
+        // 将环境绑定到SpringApplication中
 		bindToSpringApplication(environment);
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
@@ -41,68 +89,48 @@ listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublis
 
 
 
-### 创建环境类
+## 创建环境类
 
 - 根据不同的应用类型创建不同的环境类型。
-- 常用的servlet使用StandardservletEnvironment类作为环境。
+- 常用的servlet使用`StandardservletEnvironment`类作为环境容器。
 
 ```java
 	private ConfigurableEnvironment getOrCreateEnvironment() {
+        // 如果已经有环境类的话就直接返回.
 		if (this.environment != null) {
-			return this.environment;
+			  return this.environment;
 		}
         // 简单switch
         switch (this.webApplicationType) {
-		case SERVLET:
-			return new StandardServletEnvironment();
-		case REACTIVE:
-			return new StandardReactiveWebEnvironment();
-		default:
-			return new StandardEnvironment();
+            case SERVLET:
+                return new StandardServletEnvironment();
+            case REACTIVE:
+                return new StandardReactiveWebEnvironment();
+            default:
+                return new StandardEnvironment();
 		}
 	}
 ```
 
 
 
-### Servlet的环境类
-
-Servlet的环境下,对应的配置环境类是StandardServletEnvironment.
-
- ![image-20200329155324385](../../../pic/image-20200329155324385.png)
-
-超级接口就是`PropertyResolver`,它提供了key/value的属性访问.
-
-Environment继承了`PropertyResolver`,扩展了对properties和profiles的属性访问,保存了active的profiles.
-
-`ConfigurablePropertyResolver`则另外扩展了类型转换的需求.
-
-`StandardServletEnvironment`的基本属性:
-
- ![image-20200329160858010](../../../pic/image-20200329160858010.png)
-
-propertySources是具体的属性类,每个类都标志的不同的读取位置.
-
-PropertyResolver则是属性解析器,里面定义了前后缀等内容.
-
-
-
-### 配置环境profiles
-
-- 主要包含Conversionservice，PropertySource以及Profiles的配置。
+## 配置Property和Profiles
 
 ```java
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
-	if (this.addConversionService) {
-        // 获取共享的ApplicationConversionService对象,双重检查的单例模式
-     	// ConversionService是用于类型转换的接口
-		ConversionService conversionService = ApplicationConversionService.getSharedInstance();
-		environment.setConversionService((ConfigurableConversionService) conversionService);
-	}
-	configurePropertySources(environment, args);
-	configureProfiles(environment, args);
+   if (this.addConversionService) {
+       // 单例模式的获取一个ConversionService对象
+      ConversionService conversionService = ApplicationConversionService.getSharedInstance();
+      environment.setConversionService((ConfigurableConversionService) conversionService);
+   }
+   configurePropertySources(environment, args);
+   configureProfiles(environment, args);
 }
 ```
+
+1. 配置ConversionService
+2. 配置PropertySource
+3. 配置Profiles
 
 
 
@@ -149,9 +177,9 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 
 
 
-### 附加属性配置
+## 附加属性配置
 
-- 环境中的propertySources属性会在其内存一份自身作为k/v属性。
+- **环境中的propertySources属性会在其内存**
 - prepareEnvironment方法中调用了两次，暂时还不知道什么用处。
 
 ```java
@@ -175,7 +203,7 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 
 
 
-### 触发ApplicationEnvironmentPreparedEvent
+## 触发ApplicationEnvironmentPreparedEvent
 
 ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。
 
@@ -183,9 +211,11 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
  ![image-20200329162414503](../../../pic/image-20200329162414503.png)
 
+加载yml和properties的详细过程可以看[ConfigFileApplicationListener](./ConfigFileApplicationListener.md).
 
 
-### 绑定环境
+
+## 绑定环境
 
 将准备好的容器环境绑定到当前的上下文。
 
@@ -200,6 +230,8 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 		}
 	}
 ```
+
+
 
 
 

@@ -1,0 +1,36 @@
+Classfile /home/chen/github/_java/demo/src/main/java/SunInterface.class
+  Last modified 2020-4-9; size 241 bytes
+  MD5 checksum 45d2720366b6962dcf15e926df9b0c11
+  Compiled from "SunInterface.java"
+public class SunInterface implements chenbxxx.annotation.ParentInterface
+  minor version: 0
+  major version: 52
+  flags: ACC_PUBLIC, ACC_SUPER
+Constant pool:
+   #1 = Methodref          #3.#11         // java/lang/Object."<init>":()V
+   #2 = Class              #12            // SunInterface
+   #3 = Class              #13            // java/lang/Object
+   #4 = Class              #14            // chenbxxx/annotation/ParentInterface
+   #5 = Utf8               <init>
+   #6 = Utf8               ()V
+   #7 = Utf8               Code
+   #8 = Utf8               LineNumberTable
+   #9 = Utf8               SourceFile
+  #10 = Utf8               SunInterface.java
+  #11 = NameAndType        #5:#6          // "<init>":()V
+  #12 = Utf8               SunInterface
+  #13 = Utf8               java/lang/Object
+  #14 = Utf8               chenbxxx/annotation/ParentInterface
+{
+  public SunInterface();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 7: 0
+}
+SourceFile: "SunInterface.java"

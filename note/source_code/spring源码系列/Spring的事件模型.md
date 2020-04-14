@@ -1,6 +1,12 @@
 # Spring的事件模型
 
-- 首先明确，Spring中的事件模型是根据观察者模式设计的。
+- Spring中的事件模型是根据观察者模式设计的。
+
+<!-- more -->
+
+---
+
+[TOC]
 
 
 
@@ -27,7 +33,6 @@ public interface ApplicationListener<E extends ApplicationEvent> extends EventLi
 
 ```java
 public interface ApplicationEventMulticaster {
-
 	// 对监听者的增删操作
     // Bean是原来就在IOC容器中的
 	void addApplicationListener(ApplicationListener<?> listener);
@@ -35,7 +40,6 @@ public interface ApplicationEventMulticaster {
 	void removeApplicationListener(ApplicationListener<?> listener);
 	void removeApplicationListenerBean(String listenerBeanName);
 	void removeAllListeners();
-ApplicationEventMulticaster
 	// 事件发布的两个重载方法,ResolvableType表示的是事件的类型
 	void multicastEvent(ApplicationEvent event);
 	void multicastEvent(ApplicationEvent event, @Nullable ResolvableType eventType);
@@ -114,9 +118,7 @@ public interface ApplicationEventPublisher {
 
 ### 观察者模式角度
 
-从观察者模式的角度来看这些基类/接口，ApplicationListener就是观察者，ApplicationEventMulticaster就是被观察者，所以ApplicationEventMulticaster中会持有ApplicationListener的引用，而ApplicationEvent就是被观察者的各种动作，观察者会对这些动作做出一定的反应。
-
-不知道该怎么描述ApplicationEventMulticaster和ApplicationEventPublisher的关系，ApplicationEventPublisher仅仅是作为一个规范接口来的吧
+从观察者模式的角度来看这些基类/接口，ApplicationListener就是观察者，ApplicationEventMulticaster就是被观察者，所以ApplicationEventMulticaster中会持有ApplicationListener的引用，而ApplicationEvent就是被观察者的各种动作，观察者会对这些动作做出一定的响应。
 
 
 
@@ -124,7 +126,7 @@ public interface ApplicationEventPublisher {
 
 和观察者模式中一样，事件是由被观察者主动发布的。
 
-Spring中事务的发布流程的最上层方法在AbstractApplicationContext中。
+Spring中事务的发布流程的核心方法在AbstractApplicationContext中。
 
 AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接口又继承了ApplicationEventPublisher接口，所以AbstractApplicationContext也实现了publishEvent的方法。
 
@@ -192,9 +194,13 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 	}
 ```
 
+
+
 #### 事件发布
 
 `multicastEvent`是最终广播的方法，Spring中提供了`SimpleApplicationEventMulticaster`作为默认实现。
+
+从这里可以看出,事件是否需要异步执行的判断条件就是SimpleApplicationEventMulticaster的`taskExecutor`是否为空.
 
 ```java
 	// SimpleApplicationEventMulticaster
@@ -214,6 +220,8 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 		}
 	}
 ```
+
+
 
 ##### 获取所有监听者
 
