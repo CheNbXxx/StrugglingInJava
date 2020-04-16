@@ -9,7 +9,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -22,7 +21,6 @@ import java.util.List;
 @Slf4j
 public class FrameChunkDecoderTest {
 
-    @Test
     public void testFrameChunkDecoder() {
         ByteBuf byteBuf = Unpooled.copiedBuffer("012345678910".getBytes());
         ByteBuf input = byteBuf.duplicate();

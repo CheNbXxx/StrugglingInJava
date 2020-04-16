@@ -11,7 +11,6 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
 
 /**
  * 基于分割符的解码测试
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 public class DelimitedDecoderTest {
 
-    @Test
     public void mainTest() {
 //                EmbeddedChannel embeddedChannel = new EmbeddedChannel(new DelimiterBasedFrameDecoder(1024, Unpooled.copiedBuffer("*".getBytes())),new DisplayChannelHandler());
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(new LineBasedFrameDecoder(64 * 1024), new DisplayChannelHandler());

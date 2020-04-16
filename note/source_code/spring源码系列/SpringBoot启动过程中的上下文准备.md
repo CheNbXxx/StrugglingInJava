@@ -2,50 +2,56 @@
 
 
 
+---
+
+[TOC]
+
+
+
+
+
+## 主方法逻辑
+
 ```java
-prepareContext(context, environment, listeners, applicationArguments, printedBanner);
-```
-
-`prepareContext`方法是`refresh`之前最后调用的方法，是对之前创建的Context对象的填充和准备。
-
-
-
-```java
-private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
+	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
 			SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner) {
-    	// 设置环境变量,Context中还包含了BeanDefinitionReader和BeanDefinitionScanner都会设置
+        // 填充环境到应用上下文
 		context.setEnvironment(environment);
-    	// 对Context的简单处理，会注册Bean名称生成器，ResourceLoader和ConversionService
+        // 应用上下文的后续处理,具体可看下文
 		postProcessApplicationContext(context);
-    	// 调用所有的ApplicationContextInitializer
-    	// 此处的initializers就是在SpringApplication构造函数中通过工厂加载机制获取的
+        // 应用全部的初始化器
 		applyInitializers(context);
-    	// 发布ApplicationContextInitializedEvent
+        // 发布ApplicationContextInitializedEvent
 		listeners.contextPrepared(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
+		// 获取beanFactory对象
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
-    	// 将命令行参数注册为Bean对象
+        // 将args的包装对象注册为单例
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
-    	// Banner也注册未对象...
+        // 将Banner也注册了
 		if (printedBanner != null) {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
-    	// 设置是否允许BeanDefinition重复
-    	// spring.main.allow-bean-definition-overridiing配置项相关
+        // 判断如果是DefaultListableBeanFactory类
 		if (beanFactory instanceof DefaultListableBeanFactory) {
+            // 设置BeanDefinition是否可覆盖
 			((DefaultListableBeanFactory) beanFactory)
+            		// allowBeanDefinitionOverriding在环境准备的bind()方法中修改
+            		// 通过调用链得知,具体省略
 					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
-    	// 增加一个BeanFactoryPostProcessor
+        // 如果是懒加载增加一个BeanFactoryPostProcessor
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
-		// 获取所有的属性包括primarySources和sources
+		// Load the sources
+        // 获取要加载的全部源信息
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
+        // 加载BeanDefinitionLoader
 		load(context, sources.toArray(new Object[0]));
 		listeners.contextLoaded(context);
 	}
@@ -53,142 +59,150 @@ private void prepareContext(ConfigurableApplicationContext context, Configurable
 
 
 
-## 环境设置
+## 应用上下文的后处理
 
-- 将环境应用到当前的应用上下文
-- 同时会设置上下文中`AnnotatedBeanDefinitionReader`和`ClassPathBeanDefinitionScanner`两个成员变量的相关属性。
-
-```java
-// AnnotationConfigServletWebServerApplicationContext
-@Override
-public void setEnvironment(ConfigurableEnvironment environment) {
-    // 设置当前ApplicationContext的环境变量
-    super.setEnvironment(environment);
-    this.reader.setEnvironment(environment);
-    this.scanner.setEnvironment(environment);
-}
-
-// AnnotatedBeanDefinitionReader
-public void setEnvironment(Environment environment) {
-    // ConditionEvaluator是Spring条件注解的实现基础，用于处理@ConditionalOnClass等类似注解
-    this.conditionEvaluator = new ConditionEvaluator(this.registry, environment, null);
-}
-
-// ClassPathScanningCandidateComponentProvider
-// ClassPathScanningCandidateComponentProvider是ClassPathBeanDefinitionScanner的父类
-public void setEnvironment(Environment environment) {
-    Assert.notNull(environment, "Environment must not be null");
-    this.environment = environment;
-    this.conditionEvaluator = null;
-}
-
-```
-
-
-
-## postProcessApplicationContext
-
-- 为beanNameGenerator注册Bean实例
-- 设置ApplicationContext的资源加载器
-- 设置上下文中BeanFactory的属性转化工具
+具体逻辑不复杂,注册了beanNameGenerator,配置上下文和BeanFactory的工具类.
 
 ```java
+public static final String CONFIGURATION_BEAN_NAME_GENERATOR =
+			"org.springframework.context.annotation.internalConfigurationBeanNameGenerator";
+
+// SpringApplication	
 protected void postProcessApplicationContext(ConfigurableApplicationContext context) {
-    // 如果BeanNameGenerator已经生成就将其注入到上下文中
-    if (this.beanNameGenerator != null) { 		
-        context.getBeanFactory()
-        	.registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR,
-                                                   this.beanNameGenerator);
-    }
-    // 如果资源加载器不为空也添加到上下文中
-    if (this.resourceLoader != null) {
-        // 区分不同的上下文类型有不同的添加方式
-        if (context instanceof GenericApplicationContext) {
-            ((GenericApplicationContext) context).setResourceLoader(this.resourceLoader);
+    	// 注册BeanNameGenerator为单例Bean 
+        if (this.beanNameGenerator != null) {
+            context.getBeanFactory().registerSingleton(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR,
+                                                       this.beanNameGenerator);
         }
-        if (context instanceof DefaultResourceLoader) {
-            ((DefaultResourceLoader) context).setClassLoader(this.resourceLoader.getClassLoader());
+    	// 配置资源加载器
+        if (this.resourceLoader != null) {
+            if (context instanceof GenericApplicationContext) {
+                ((GenericApplicationContext) context).setResourceLoader(this.resourceLoader);
+            }
+            if (context instanceof DefaultResourceLoader) {
+                ((DefaultResourceLoader) context).setClassLoader(this.resourceLoader.getClassLoader());
+            }
         }
-    }
-    // 配置BeanFactory的属性转化工具类
-    if (this.addConversionService) {
-        context.getBeanFactory()
-            .setConversionService(ApplicationConversionService.getSharedInstance());
- }
+    	// 填充转换类到BeanFactory
+        if (t	protected void applyInitializers(ConfigurableApplicationContext context) {
+		for (ApplicationContextInitializer initializer : getInitializers()) {
+			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
+					ApplicationContextInitializer.class);
+			Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+			initializer.initialize(context);
+		}
+	}
 ```
 
 
 
-## applyInitializers
+## 应用初始化器
+
+此方法内调用在构造函数中填充的全部初始化器的`initialize`方法.
 
 ```java
 // SpringApplication
 protected void applyInitializers(ConfigurableApplicationContext context) {
-    for (ApplicationContextInitializer initializer : getInitializers()) {
-        // 两行的断言相关，可以暂时忽略
-        Class<?> requiredType = GenericTypeResolver
-            .resolveTypeArgument(initializer.getClass(),ApplicationContextInitializer.class);
-        Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
-        // 调用initialize方法，讲创建的上下文作为入参
-        initializer.initialize(context);
-    }
+         // 遍历调用
+        for (ApplicationContextInitializer initializer : getInitializers()) {
+            // 判断类型
+            Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
+                                                                            ApplicationContextInitializer.class);
+            Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+    		// 调用
+            initializer.initialize(context);
+        }
 }
-
-// SpringApplication
+// 就是将一开始构造函数中获取的初始化器全部提取并排序
 public Set<ApplicationContextInitializer<?>> getInitializers() {
-    // 讲SpringApplication中的初始化类集合包装一下返回
-    return asUnmodifiableOrderedSet(this.initializers);
+   	 	return asUnmodifiableOrderedSet(this.initializers);
 }
 ```
 
 
 
-## 发布ApplicationContextInitializedEvent事件
+## 发布ApplicationContextInitializedEvent
 
-- 常规的调用套路，最终会调用`EventPublishingRunListener`的`contextPrepared`方法
-- `EventPublishingRunListener`就是一个事件发布的工具类，通过工厂加载机制获得后，封装到`SpringApplicationRunListeners`中。
-- `SpringApplicationRunListeners`中保存的是`SpringApplicationRunListener`的集合，每个方法都是遍历调用。
+以下为具体的监听者
+
+ ![image-20200414232431965](../../../pic/image-20200414232431965.png)
+
+功能先忽略.
+
+
+
+## 加载源信息
+
+主要负责创建BeanDefinitionLoader,填充必要属性并加载部分BeanDefinition.
 
 ```java
-// EventPublishingRunListener
-@Override
-public void contextPrepared(ConfigurableApplicationContext context) {
-    // 还是调用广播器广播的事件
-    this.initialMulticaster
-        .multicastEvent(new ApplicationContextInitializedEvent(this.application, this.args, context));
+// SpringApplictaion
+// 获取所有的源信息，组合主要源和附加的
+public Set<Object> getAllSources() {
+        Set<Object> allSources = new LinkedHashSet<>();
+    	// primarySources是在SpringApplication的构造函数里面就填充了
+        if (!CollectionUtils.isEmpty(this.primarySources)) {
+            	allSources.addAll(this.primarySources);
+        }
+        if (!CollectionUtils.isEmpty(this.sources)) {
+            	allSources.addAll(this.sources);
+        }
+        return Collections.unmodifiableSet(allSources);
 }
-```
 
-- debug发现此处包含两个监听器
-  1. BackgroundPreinitializer
-  2. DelegatingApplicationListener
-
-
-
-
-
-## Load(Application,Object[])
-
-```java
+// SpringApplictaion
 protected void load(ApplicationContext context, Object[] sources) {
-    if (logger.isDebugEnabled()) {
-        logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
-    }
-    // 创建一个BeanDefinitionLoader
-    BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
-    // 设置加载器的一些属性
-    if (this.beanNameGenerator != null) {
-        loader.setBeanNameGenerator(this.beanNameGenerator);
-    }
-    if (this.resourceLoader != null) {
-        loader.setResourceLoader(this.resourceLoader);
-    }
-    if (this.environment != null) {
-        loader.setEnvironment(this.environment);
-    }
-    loader.load();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
+            }
+    		// 创建BeanDefinitionLoader类,负责加载BeanDefinition
+            BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
+    		// 为BeanDefinitionLoader填充属性
+            if (this.beanNameGenerator != null) {
+                loader.setBeanNameGenerator(this.beanNameGenerator);
+            }
+            if (this.resourceLoader != null) {
+                loader.setResourceLoader(this.resourceLoader);
+            }
+            if (this.environment != null) {
+                loader.setEnvironment(this.environment);
+            }
+    		// 加载BeanDefinitionLoader
+            loader.load();
 }
+
 ```
 
 
 
+
+
+## 发布ApplicationPreparedEvent
+
+ApplicationPreparedEvent的发布流程和其他的不同，这里单独记一下。
+
+SpringBoot的启动阶段的事件发布的调用链都会指到SpringApplicationRunListener。
+
+```java
+// EventPublisherRunListener	
+@Override
+public void contextLoaded(ConfigurableApplicationContext context) {
+    	// 将监听器和ApplicationContext绑定
+        for (ApplicationListener<?> listener : this.application.getListeners()) {
+                if (listener instanceof ApplicationContextAware) {
+                  	  ((ApplicationContextAware) listener).setApplicationContext(context);
+                }
+                context.addApplicationListener(listener);
+        }
+    	// 事件发布
+        this.initialMulticaster.multicastEvent(new ApplicationPreparedEvent(this.application, this.args, context));
+}
+```
+
+**到ApplicationPreparedEvent之后，监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
+
+
+
+触发的对应监听器有以下五个：
+
+ ![image-20200415101613282](../../../pic/image-20200415101613282.png)
