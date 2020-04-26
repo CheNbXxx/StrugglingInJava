@@ -8,7 +8,7 @@
 
 具体方法如下:
 
-![image-20200426221929670](/home/chen/github/_java/pic/image-20200426221929670.png)
+![image-20200426221929670](../../../pic/image-20200426221929670.png)
 
 公开的方法只有两个:
 
@@ -177,7 +177,7 @@ public static void invokeBeanFactoryPostProcessors(
 
 最初的三个入参BeanFactoryPostProcessor:
 
-  ![image-20200425220536920](/home/chen/github/_java/pic/image-20200425220536920.png)
+  ![image-20200425220536920](../../../pic/image-20200425220536920.png)
 
 其中的前两个在执行流程第一步就是被执行.
 
@@ -187,7 +187,7 @@ public static void invokeBeanFactoryPostProcessors(
 
 以下是四五步执行的PostProcessor列表.
 
- ![image-20200425225930957](/home/chen/github/_java/pic/image-20200425225930957.png)
+ ![image-20200425225930957](../../../pic/image-20200425225930957.png)
 
 其中有`ConfigurationClassPostProcessor`和`ConfigFileApplicationListener$PropertySourceOrderingPostProcessor`比较重要.
 
@@ -195,17 +195,17 @@ public static void invokeBeanFactoryPostProcessors(
 
 继承PriorityOrdered的BeanPostProcessor.
 
- ![image-20200425230316550](/home/chen/github/_java/pic/image-20200425230316550.png)
+ ![image-20200425230316550](../../../pic/image-20200425230316550.png)
 
 继承Ordered的BeanPostProcessor
 
- ![image-20200425230338194](/home/chen/github/_java/pic/image-20200425230338194.png)
+ ![image-20200425230338194](../../../pic/image-20200425230338194.png)
 
 以下是其他的BeanPostProcessor.
 
 其中TestBeanPostProcessor是我个人测试的类.
 
- ![image-20200425230356693](/home/chen/github/_java/pic/image-20200425230356693.png)
+ ![image-20200425230356693](../../../pic/image-20200425230356693.png)
 
 
 
@@ -231,7 +231,7 @@ SpringAOP的实现也需要使用该接口,在合适的机会替换原始类,使
 
 该接口主要的方法如下图:
 
- ![image-20200426223449436](/home/chen/github/_java/pic/image-20200426223449436.png)
+ ![image-20200426223449436](../../../pic/image-20200426223449436.png)
 
 接口中仅有两个方法,根据方法名应该也直到执行的顺序了.
 
