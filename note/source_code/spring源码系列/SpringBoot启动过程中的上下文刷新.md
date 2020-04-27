@@ -52,55 +52,47 @@ protected void refresh(ApplicationContext applicationContext) {
 @Override
 public void refresh() throws BeansException, IllegalStateException {
     synchronized (this.startupShutdownMonitor) {
-        // 准备刷新的一些必要条件.
-        prepareRefresh();
-		// 获取BeanFactory,其中可能会有刷新流程
-        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
-        // BeanFactory的相关配置
-        prepareBeanFactory(beanFactory);
-        try {
-            // 
-            postProcessBeanFactory(beanFactory);
-			// 调用所有的BeanFactoryPostProcessor
-            invokeBeanFactoryPostProcessors(beanFactory);
-			// 注册BeanPostProcessor
-            registerBeanPostProcessors(beanFactory);
-			// 初始化MessageSource
-            initMessageSource();
-			// 初始化广播器
-            initApplicationEventMulticaster();
-            // 刷新上下文
-            onRefresh();
-			// 检查监听器并注册
-            registerListeners();
-            // 
-            finishBeanFactoryInitialization(beanFactory);
-            // 
-            finishRefresh();
-        }
-
-        catch (BeansException ex) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Exception encountered during context initialization - " +
-                            "cancelling refresh attempt: " + ex);
+            // 准备刷新的一些必要条件.
+            prepareRefresh();
+            // 获取BeanFactory,其中可能会有刷新流程
+            ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+            // BeanFactory的相关配置
+            prepareBeanFactory(beanFactory);
+            try {
+                    postProcessBeanFactory(beanFactory);
+                    // 调用所有的BeanFactoryPostProcessor
+                    invokeBeanFactoryPostProcessors(beanFactory);
+                    // 注册BeanPostProcessor
+                    registerBeanPostProcessors(beanFactory);
+                    // 初始化消息源,国际化支持,暂不解析.
+                    initMessageSource();
+                    // 初始化广播器,结果就是ApplicationContext持有广播器的引用,且广播器在BeanFactory中也有Bean对象
+                    initApplicationEventMulticaster();
+                    // 刷新上下文
+                    onRefresh();
+                    // 检查监听器并注册,将BeanFactory以及早期的ApplicationListener注册到前一步的广播器中
+                    registerListeners();
+                    // 初始化所有的单例Bean
+                    finishBeanFactoryInitialization(beanFactory);
+                    // 
+                    finishRefresh();
+            } catch (BeansException ex) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Exception encountered during context initialization - " +
+                                    "cancelling refresh attempt: " + ex);
+                    }
+                // Destroy already created singletons to avoid dangling resources.
+                destroyBeans();
+                // Reset 'active' flag.
+                cancelRefresh(ex);
+                // Propagate exception to caller.
+                throw ex;
+            }finally {
+                // Reset common introspection caches in Spring's core, since we
+                // might not ever need metadata for singleton beans anymore...
+                resetCommonCaches();
             }
-
-            // Destroy already created singletons to avoid dangling resources.
-            destroyBeans();
-
-            // Reset 'active' flag.
-            cancelRefresh(ex);
-
-            // Propagate exception to caller.
-            throw ex;
         }
-
-        finally {
-            // Reset common introspection caches in Spring's core, since we
-            // might not ever need metadata for singleton beans anymore...
-            resetCommonCaches();
-        }
-    }
 }
 ```
 
@@ -357,3 +349,184 @@ public static void registerBeanPostProcessors(
 
 
 
+
+
+## initMessageSource - 初始化消息源
+
+挖坑待填.
+
+
+
+
+
+## initApplicationEventMulticaster - 初始化事件广播器
+
+```java
+public static final String APPLICATION_EVENT_MULTICASTER_BEAN_NAME = "applicationEventMulticaster";
+
+// AbstractApplicationContext
+protected void initApplicationEventMulticaster() {
+    	// 获取BeanFactory
+    	// getBeanFactory就是通过不同子类各自实现了
+       ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+    	// 判断beanFactory中时都存在Bean对象
+       if (beanFactory.containsLocalBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME)) {
+           		// 存在Bean对象就把对象取出来放在,并赋值给当前上下文
+              this.applicationEventMulticaster =
+                    beanFactory.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, ApplicationEventMulticaster.class);
+              if (logger.isTraceEnabled()) {
+                 	logger.trace("Using ApplicationEventMulticaster [" + this.applicationEventMulticaster + "]");
+              }
+       } else {
+           	  // 如果没有广播器的情况下
+           	  // 直接初始化一个SimpleApplicationEventMulticaster
+              this.applicationEventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
+           		// 注册单例的Bean
+              beanFactory.registerSingleton(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, this.applicationEventMulticaster);
+              if (logger.isTraceEnabled()) {
+                	 logger.trace("No '" + APPLICATION_EVENT_MULTICASTER_BEAN_NAME + "' bean, using " +
+                       		"[" + this.applicationEventMulticaster.getClass().getSimpleName() + "]");
+              }
+       }
+}
+```
+
+上面代码展示的逻辑算是比较简单的了.
+
+最终的结果就是确保`AbstractApplicationContext`应用的上下文,以及BeanFactory中都保留广播器实例.
+
+如果BeanFactory已经有该实例对象了,可能通过BeanFactoryPostProcessor已经注册了,那么直接采用就好了.
+
+不然就现场初始化一个.
+
+
+
+## onRefresh - 刷新
+
+在AbstractApplicationContext中,该方法完整信息如下:
+
+```java
+	protected void onRefresh() throws BeansException {
+		// For subclasses: do nothing by default.
+	}
+```
+
+也就是说该方法是由子类实现的,在此方法中可以注册特定的Bean或者其他扩展操作.
+
+其中常用的子类有ServletWebServerApplicationContext,ReactiveWebServerApplicationContext等,根据应用的不同也会有不同的刷新逻辑.
+
+
+
+##  registerListeners - 注册监听器
+
+- 其实我有点不太明白为什么注册监听器要在onRefresh之后,在初始化完广播器不就可以注册了吗?
+
+```java
+// AbstractApplicationContext
+protected void registerListeners() {
+   // 将之前就在应用上下文的监听器注册到广播器中.
+   for (ApplicationListener<?> listener : getApplicationListeners()) {
+      	getApplicationEventMulticaster().addApplicationListener(listener);
+   }
+
+   // 获取所有ApplicationListener的Bean对象,并注册到广播器
+    // 这里有注释提别提示了一个问题,千万不要在这里进行初始化,
+    // 因为在此处直接初始化全部监听器的Bean对象,BeanPostProcesser就会对这些Bean对象失效.
+   String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
+   for (String listenerBeanName : listenerBeanNames) {
+      	getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
+   }
+
+   // Publish early application events now that we finally have a multicaster...
+    // 发布早期的事件
+   Set<ApplicationEvent> earlyEventsToProcess = this.earlyApplicationEvents;
+    // 置空,这个很重要!!  是一个标识
+   this.earlyApplicationEvents = null;
+   if (earlyEventsToProcess != null) {
+       	  // 对事件进行统一的分发 
+          for (ApplicationEvent earlyEvent : earlyEventsToProcess) {
+             	getApplicationEventMulticaster().multicastEvent(earlyEvent);
+          }
+   }
+}
+```
+
+该方法主要就是将上下文中注册的监听器以及BeanFactory中的监听器都注册到广播器中,此后就是由广播器独家分发事件.
+
+结合事件分发方法`publishEvent`,也马上能看出来earlyApplicationEvents的作用.
+
+```java
+// AbstractApplicationContext
+...
+if (this.earlyApplicationEvents != null) {
+    	// earlyApplicationEvents不为空的情况下,并不会进行消息的广播
+   		this.earlyApplicationEvents.add(applicationEvent);
+} else {
+   		getApplicationEventMulticaster().multicastEvent(applicationEvent, eventType);
+}
+...
+```
+
+在earlyApplicationEvents不为null的情况下,事件分发全都被暂时拦截的,保存在earlyApplicationEvents中.
+
+在将所有的ApplicationListener注册到广播器之后才会一口气分发下去.
+
+所以如果以ApplicationContext作为监听者或者说观察者模式的实现方案时,要特别注意这点.
+
+至于为什么需要在onRefresh之后在广播,可能是onRefresh之后,常规的Bean对象才都在BeanFactory中注册.有些可能并没有初始化.
+
+
+
+## finishBeanFactoryInitialization - 初始化BeanFactory中的Bean对象
+
+```java
+protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
+   // 首先为BeanFactory初始化ConversionService
+    // 此时他可能已经在BeanFactory中注册,但是并没有初始化,BeanFactory外层对象也并没有持有它的引用.
+   if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
+         beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
+      		beanFactory.setConversionService(
+            		beanFactory.getBean(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class));
+   }
+
+   // Register a default embedded value resolver if no bean post-processor
+   // (such as a PropertyPlaceholderConfigurer bean) registered any before:
+   // at this point, primarily for resolution in annotation attribute values.
+   if (!beanFactory.hasEmbeddedValueResolver()) {
+      		beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
+   }
+
+   // LoadTimeWeaverAware这个类好像很常看到,暂时还不知道什么意思.
+   String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
+   for (String weaverAwareName : weaverAwareNames) {
+      		getBean(weaverAwareName);
+   }
+
+   // 置空临时的类加载器
+   beanFactory.setTempClassLoader(null);
+
+   // 冻结所有的配置项,具体什么时候解冻未知.
+   beanFactory.freezeConfiguration();
+
+   // 预先实例化所有单例Bean
+   beanFactory.preInstantiateSingletons();
+```
+
+该方法主要就是用来预先加载所有的单例Bean对象,在这之前还有一些检查和配置.
+
+加载单例Bean之前还要先冻结配置项,避免加载的时候改来改去弄乱了.
+
+下面是冻结配置项的操作,BeanFactory中用了两个单独的字段表示被冻结的配置项.
+
+```java
+// DefaultListableBeanFactory
+@Override
+public void freezeConfiguration() {
+   this.configurationFrozen = true;
+   this.frozenBeanDefinitionNames = StringUtils.toStringArray(this.beanDefinitionNames);
+}
+```
+
+预先加载单例Bean应该是需要单独一个文件了.
+
+留坑.
