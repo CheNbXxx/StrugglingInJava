@@ -52,29 +52,30 @@ protected void refresh(ApplicationContext applicationContext) {
 @Override
 public void refresh() throws BeansException, IllegalStateException {
     synchronized (this.startupShutdownMonitor) {
-            // 准备刷新的一些必要条件.
+            // 准备刷新的一些必要条件,记录启动时间,设置对应标识位等等
             prepareRefresh();
-            // 获取BeanFactory,其中可能会有刷新流程
+            // 获取BeanFactory,其中可能会有刷新流程,Servlet Web环境不会刷新BeanFactory
             ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
-            // BeanFactory的相关配置
+            // BeanFactory的相关配置,设置类加载器,注册特殊的Bean
             prepareBeanFactory(beanFactory);
             try {
+                	// 子类实现,前置方法,可根据不同的应用上下文
                     postProcessBeanFactory(beanFactory);
-                    // 调用所有的BeanFactoryPostProcessor
+                    // 调用所有的BeanFactoryPostProcessor,在里面加载Configuration类
                     invokeBeanFactoryPostProcessors(beanFactory);
-                    // 注册BeanPostProcessor
+                    // 注册BeanPostProcessor,将BeanPostProcessor注册到应用上下文
                     registerBeanPostProcessors(beanFactory);
                     // 初始化消息源,国际化支持,暂不解析.
                     initMessageSource();
                     // 初始化广播器,结果就是ApplicationContext持有广播器的引用,且广播器在BeanFactory中也有Bean对象
                     initApplicationEventMulticaster();
-                    // 刷新上下文
+                    // 刷新上下文,这也是延迟到子类实现的方法.
                     onRefresh();
                     // 检查监听器并注册,将BeanFactory以及早期的ApplicationListener注册到前一步的广播器中
                     registerListeners();
                     // 初始化所有的单例Bean
                     finishBeanFactoryInitialization(beanFactory);
-                    // 
+                    // 应用上下文刷新之后的收尾.
                     finishRefresh();
             } catch (BeansException ex) {
                     if (logger.isWarnEnabled()) {
@@ -530,3 +531,59 @@ public void freezeConfiguration() {
 预先加载单例Bean应该是需要单独一个文件了.
 
 留坑.
+
+
+
+## finishRefresh - 收尾工作
+
+```java
+protected void finishRefresh() {
+        // Clear context-level resource caches (such as ASM metadata from scanning).
+    	// 清除容器级别的资源缓存
+        clearResourceCaches();
+
+        // Initialize lifecycle processor for this context.
+        initLifecycleProcessor();
+
+        // Propagate refresh to lifecycle processor first.
+        getLifecycleProcessor().onRefresh();
+
+        // Publish the final event.
+        publishEvent(new ContextRefreshedEvent(this));
+
+        // Participate in LiveBeansView MBean, if active.
+        LiveBeansView.registerApplicationContext(this);
+}
+```
+
+
+
+```java
+// AbstractApplicationContext
+// 初始化生命周期的处理器
+protected void initLifecycleProcessor() {
+    	// 这个处理过程好像和广播器的有点像
+    	// 最终就是使ApplicationContext持有该处理器引用,并且BeanFactory中保留Bean对象
+        ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+        if (beanFactory.containsLocalBean(LIFECYCLE_PROCESSOR_BEAN_NAME)) {
+                this.lifecycleProcessor =
+                    	beanFactory.getBean(LIFECYCLE_PROCESSOR_BEAN_NAME, LifecycleProcessor.class);
+                if (logger.isTraceEnabled()) {
+                    	logger.trace("Using LifecycleProcessor [" + this.lifecycleProcessor + "]");
+                }
+        } else {
+                DefaultLifecycleProcessor defaultProcessor = new DefaultLifecycleProcessor();
+                defaultProcessor.setBeanFactory(beanFactory);
+                this.lifecycleProcessor = defaultProcessor;
+                beanFactory.registerSingleton(LIFECYCLE_PROCESSOR_BEAN_NAME, this.lifecycleProcessor);
+                if (logger.isTraceEnabled()) {
+                    	logger.trace("No '" + LIFECYCLE_PROCESSOR_BEAN_NAME + "' bean, using " +
+                                 "[" + this.lifecycleProcessor.getClass().getSimpleName() + "]");
+                }
+        }
+}
+```
+
+这里不难发现,我们可以在此之前向BeanFactory中注册一个LifecycleProcessor的Bean对象,那么此处就会使用该对象.
+
+如果没有注册,那就默认初始化为DefaultLifecycleProcessor.
