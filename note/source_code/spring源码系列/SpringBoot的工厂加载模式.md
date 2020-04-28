@@ -79,44 +79,44 @@ private static final Map<ClassLoader, MultiValueMap<String, String>> cache = new
  
 // 以一个Class类和ClassLoader为入参
 public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader){
-		String factoryTypeName = factoryType.getName();
-		return loadSpringFactories(classLoader).getOrDefault(factoryTypeName, Collections.emptyList());
+            String factoryTypeName = factoryType.getName();
+            return loadSpringFactories(classLoader).getOrDefault(factoryTypeName, Collections.emptyList());
 }
 
 private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
-       // 从缓存中获取，如果有直接退出。 
-		MultiValueMap<String, String> result = cache.get(classLoader);
-		if (result != null) {
-			return result;
-		}
-		try {
-            // 使用ClassLoader获取工厂配置资源的全路径
-			Enumeration<URL> urls = (classLoader != null ?
-					classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
-					ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
-			result = new LinkedMultiValueMap<>();
-            // 遍历获取到的spring.factories文件
-			while (urls.hasMoreElements()) {
-				URL url = urls.nextElement();
-				UrlResource resource = new UrlResource(url);
-                // 获取其中的Properties属性值。
-				Properties properties = PropertiesLoaderUtils.loadProperties(resource);
-				for (Map.Entry<?, ?> entry : properties.entrySet()) {
-                    // 获取key值,去空
-					String factoryTypeName = ((String) entry.getKey()).trim();
-                    // 按照逗号拆分value,并遍历添加到result
-					for (String factoryImplementationName : StringUtils.commaDelimitedListToStringArray((String) entry.getValue())) {
-						result.add(factoryTypeName, factoryImplementationName.trim());
-					}
-				}
-			}
-             // 添加到缓存	
-			cache.put(classLoader, result);
-			return result;
-		}catch (IOException ex) {
-			throw new IllegalArgumentException("Unable to load factories from location [" +
-					FACTORIES_RESOURCE_LOCATION + "]", ex);
-		}
+           // 从缓存中获取，如果有直接退出。 
+            MultiValueMap<String, String> result = cache.get(classLoader);
+            if (result != null) {
+                	return result;
+            }
+            try {
+                    // 使用ClassLoader获取工厂配置资源的全路径
+                    Enumeration<URL> urls = (classLoader != null ?
+                            classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
+                            ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
+                    result = new LinkedMultiValueMap<>();
+                    // 遍历获取到的spring.factories文件
+                    while (urls.hasMoreElements()) {
+                        URL url = urls.nextElement();
+                        UrlResource resource = new UrlResource(url);
+                        // 获取其中的Properties属性值。
+                        Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+                        for (Map.Entry<?, ?> entry : properties.entrySet()) {
+                                // 获取key值,去空
+                                String factoryTypeName = ((String) entry.getKey()).trim();
+                                // 按照逗号拆分value,并遍历添加到result
+                                for (String factoryImplementationName : StringUtils.commaDelimitedListToStringArray((String) entry.getValue())) {
+                                    	result.add(factoryTypeName, factoryImplementationName.trim());
+                                }
+                        }
+                    }
+                     // 添加到缓存	
+                    cache.put(classLoader, result);
+                    return result;
+            }catch (IOException ex) {
+                    throw new IllegalArgumentException("Unable to load factories from location [" +
+                            FACTORIES_RESOURCE_LOCATION + "]", ex);
+            }
 	}
 ```
 
@@ -136,7 +136,7 @@ public static <T> List<T> loadFactories(Class<T> factoryType, @Nullable ClassLoa
 		if (classLoaderToUse == null) {
 			classLoaderToUse = SpringFactoriesLoader.class.getClassLoader();
 		}
-    	// 调用方法获取所有配置的类名
+    	// 调用loadFactoryNames方法获取所有配置的类名
 		List<String> factoryImplementationNames = loadFactoryNames(factoryType, classLoaderToUse);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Loaded [" + factoryType.getName() + "] names: " + factoryImplementationNames);

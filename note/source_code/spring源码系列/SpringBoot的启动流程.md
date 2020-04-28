@@ -1,48 +1,52 @@
 # SpringBoot的启动流程概述
 
 - 尽量不会有太多的代码，以理清楚流程为主
-
-<!-- more -->
+- 以SpringBoot Servlet Web应用为基础分析.
 
 ---
+
+<!-- more -->
 
 [TOC]
 
 
 
-## BootStrap调用
+## 外层调用链子
 
 ```java
 @SpringBootApplication
-public class BeanValidationBootStrap {
-    public static void main(String[] args) {
-        SpringApplication.run(BeanValidationBootStrap.class, args);
-    }
+public class MvcApplication {
+        public static void main(String[] args) {
+            	SpringApplication.run(MvcApplication.class, args);
+        }
 }
 ```
 
 以上是最基础的Spring应用启动代码，调用SpringApplication的静态方法run启动Spring的整个容器。
 
+
+
 ## SpringApplication构造函数
 
 ```java
-// 直接点进来的话，这个ResourceLoader是null	
+// SpringApplication
+// 入参中的的PrimarySources是配置主类,也就是MvcApplication.class.
 public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
-        // 资源加载器,此处为null
-		this.resourceLoader = resourceLoader;
-		Assert.notNull(primarySources, "PrimarySources must not be null");
-         // 主要数据源集合
-		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
-         // Web应用类型
-		this.webApplicationType = WebApplicationType.deduceFromClasspath();
-         // 设置初始化器,具体有哪些看下文
-	     setInitializers(
-            (Collection)getSpringFactoriesInstances(ApplicationContextInitializer.class));
-          // 设置监听者
-		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
-          // 推断应用主类，此处代码我感觉还是很新奇的
-		this.mainApplicationClass = deduceMainApplicationClass();
-	}
+            // 资源加载器,此处为null
+            this.resourceLoader = resourceLoader;
+            Assert.notNull(primarySources, "PrimarySources must not be null");
+             // 主要数据源集合
+            this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+             // Web应用类型
+            this.webApplicationType = WebApplicationType.deduceFromClasspath();
+             // 设置初始化器,具体有哪些看下文
+             setInitializers(
+                (Collection)getSpringFactoriesInstances(ApplicationContextInitializer.class));
+              // 设置监听者
+            setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+              // 推断应用主类，此处代码我感觉还是很新奇的
+            this.mainApplicationClass = deduceMainApplicationClass();
+}
 ```
 
 ### 初始化器
@@ -52,6 +56,8 @@ ApplicationContextInitializer的实现子类:
  ![image-20200329145817718](../../../pic/image-20200329145817718.png)
 
 ServerPortInfoApplicationContextInitializer 会直接添加一个WebServerInitializedEvent的监听
+
+其他的留坑。
 
 ### 监听器
 
@@ -82,63 +88,68 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 ## Run()方法
 
 - run方法是启动的核心方法，包含了环境准备，监听事件的发布，上下文的刷新及后续处理等等。
+- 执行方法的结果就是返回一个可使用的ConfigurationApplicationContext,也可以理解为就是应用上下文的装配过程.
 
 ```java
 	public ConfigurableApplicationContext run(String... args) {
         // 用于记录时间，可以当做是秒表
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
-		ConfigurableApplicationContext context = null;
+        // 这个就是最终要返回的上下文对象 
+        ConfigurableApplicationContext context = null;
+        // 异常报告
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
         // Headless相关配置
 		configureHeadlessProperty();
         // 工厂加载机制获取SpringApplicationRunListener，并封装为一个对象
+        // SpringApplicationRunListener是应用启动前期的广播器.
 		SpringApplicationRunListeners listeners = getRunListeners(args)；
          // 触发ApplicationStartingEvent
 		listeners.starting();
 		try {
-            // 对main方法的入参进行包装
-			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
-            // 准备容器环境
-            // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件中的内容
-        	// 会将环境与当前的SpringApplication绑定
-			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
-            // 配置忽略的Bean信息,`spring.beaninfo.ignore`配置项
-			configureIgnoreBeanInfo(environment);
-            // 输出Banner
-			Banner printedBanner = printBanner(environment);
-            // 创建对应的应用上下文
-			context = createApplicationContext();
-            // 还是工厂加载模式，获取异常的报告之类的
-			exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
-					new Class[] { ConfigurableApplicationContext.class }, context);
-            // 准备上下文 
-			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
-            // 刷新上下文
-			refreshContext(context);
-            // 刷新上下文之后的操作
-			afterRefresh(context, applicationArguments);
-            // 计时结束
-			stopWatch.stop();
-			if (this.logStartupInfo) {
-				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
-			}
-			listeners.started(context);
-			callRunners(context, applicationArguments);
-		}
-		catch (Throwable ex) {
-			handleRunFailure(context, ex, exceptionReporters, listeners);
-			throw new IllegalStateException(ex);
+                // 对main方法的入参进行包装
+                ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+                // 准备容器环境
+                // 会触发ApplicationEnvironmentPreparedEvent，读取配置文件中的内容
+                // 会将环境与当前的SpringApplication绑定
+                ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+                // 配置忽略的Bean信息,`spring.beaninfo.ignore`配置项
+                configureIgnoreBeanInfo(environment);
+                // 输出Banner
+                Banner printedBanner = printBanner(environment);
+                // 创建对应的应用上下文
+                // 当前环境的上下文主类是AnnotationConfigServletWebServerApplicationContext
+                context = createApplicationContext();
+                // 还是工厂加载模式，获取异常的报告之类的
+                exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
+                        new Class[] { ConfigurableApplicationContext.class }, context);
+                // 准备上下文 
+                prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+                // 刷新上下文
+                refreshContext(context);
+                // 刷新上下文之后的操作
+                // Servlet Web环境下并没有实现该方法
+                afterRefresh(context, applicationArguments);
+                // 计时结束
+                stopWatch.stop();
+                if (this.logStartupInfo) {
+                        new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
+                }
+                // 广播ApplicationStartedEvent
+                listeners.started(context);
+                callRunners(context, applicationArguments);
+		} catch (Throwable ex) {
+                handleRunFailure(context, ex, exceptionReporters, listeners);
+                throw new IllegalStateException(ex);
 		}
 
 		try {
-			listeners.running(context);
+				listeners.running(context);
+		} catch (Throwable ex) {
+                handleRunFailure(context, ex, exceptionReporters, null);
+                throw new IllegalStateException(ex);
 		}
-		catch (Throwable ex) {
-			handleRunFailure(context, ex, exceptionReporters, null);
-			throw new IllegalStateException(ex);
-		}
-		return context;args
+		return context;
 	}
 ```
 

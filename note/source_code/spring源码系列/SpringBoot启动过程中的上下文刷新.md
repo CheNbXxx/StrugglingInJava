@@ -4,6 +4,7 @@
 
 - 刷新流程是SpringBoot中最为关键流程,方法主流程在`AbstractApplicationContext#refresh`中
 - Bean的声明流程基本都在这个方法.
+- 因为大部分的代码都蛮复杂的,应该会在别的文件里面单独分析,先走完整个流程.
 
 ---
 
@@ -52,7 +53,7 @@ protected void refresh(ApplicationContext applicationContext) {
 @Override
 public void refresh() throws BeansException, IllegalStateException {
     synchronized (this.startupShutdownMonitor) {
-            // 准备刷新的一些必要条件,记录启动时间,设置对应标识位等等
+            // 准备刷新前的一些逻辑,记录启动时间,设置对应标识位等
             prepareRefresh();
             // 获取BeanFactory,其中可能会有刷新流程,Servlet Web环境不会刷新BeanFactory
             ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
@@ -173,6 +174,41 @@ public final ConfigurableListableBeanFactory getBeanFactory() {
 
 - 在Servlet Web的应用里面,obtainFreshBeanFactory就是个获取的方法,并没有刷新流程.
 - 具体的什么情况会刷新,什么情况只是简单获取.
+
+## postProcessBeanFactory - BeanFactory的前置处理
+
+不同的应用类型会有不同的实现,以下为常见的实现类:
+
+ ![image-20200428223050944](/home/chen/github/_java/pic/image-20200428223050944.png)
+
+以`AnnotationConfigServletWebServerApplicationContext`为上下文主类为例,作为切入了解.
+
+```java
+// AnnotationConfigServletWebServerApplicationContext	
+@Override
+protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    	// 调用父类方法,也就是ServletWebServerApplicationContext的
+        super.postProcessBeanFactory(beanFactory);
+        if (this.basePackages != null && this.basePackages.length > 0) {
+            	this.scanner.scan(this.basePackages);
+        }
+        if (!this.annotatedClasses.isEmpty()) {
+            	this.reader.register(ClassUtils.toClassArray(this.annotatedClasses));
+        }
+}
+// ServletWebServerApplicationContext
+@Override
+protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    	// 新增一个BeanPostProcessor
+        beanFactory.addBeanPostProcessor(new WebApplicationContextServletContextAwareProcessor(this));
+    	// 注册一个忽略的类
+        beanFactory.ignoreDependencyInterface(ServletContextAware.class);
+    	// 注册Web应用的生命周期
+        registerWebApplicationScopes();
+}
+```
+
+
 
 
 
@@ -543,15 +579,17 @@ protected void finishRefresh() {
         clearResourceCaches();
 
         // Initialize lifecycle processor for this context.
+    	// 初始化生命周期处理函数
         initLifecycleProcessor();
 
-        // Propagate refresh to lifecycle processor first.
+        // 刷新生命周期处理
         getLifecycleProcessor().onRefresh();
 
         // Publish the final event.
+    	// 发布ContextRefreshedEvent事件
         publishEvent(new ContextRefreshedEvent(this));
 
-        // Participate in LiveBeansView MBean, if active.
+        // MBean相关注册
         LiveBeansView.registerApplicationContext(this);
 }
 ```
@@ -587,3 +625,7 @@ protected void initLifecycleProcessor() {
 这里不难发现,我们可以在此之前向BeanFactory中注册一个LifecycleProcessor的Bean对象,那么此处就会使用该对象.
 
 如果没有注册,那就默认初始化为DefaultLifecycleProcessor.
+
+
+
+其中蛮多的方法并没有讲清楚,先画圈在填色吧.
