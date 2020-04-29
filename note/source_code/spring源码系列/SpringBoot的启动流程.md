@@ -1,6 +1,6 @@
 # SpringBoot的启动流程概述
 
-- 尽量不会有太多的代码，以理清楚流程为主
+- 尽量不会有太多的代码，以理清楚流程为主，复杂的代码会单独一个文件。
 - 以SpringBoot Servlet Web应用为基础分析.
 
 ---
@@ -186,29 +186,31 @@ private SpringApplicationRunListeners getRunListeners(String[] args) {
 }
 ```
 
-**Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`的特殊工具类发布.**
+**Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`这个工具类的形式发布.**
 
-`SpringApplicationRunListeners`内部封装了Log对象和`SpringApplicationRunListener`的集合.
+`SpringApplicationRunListeners`内部封装了Log对象和`SpringApplicationRunListener`（前面的有个s）的集合.
 
-`SpringApplicationRunListener`是对启动过程中事件发布的规范接口,定义了各种相关事件.
+而`SpringApplicationRunListener`是对启动过程中事件发布的规范接口，定义了各种相关事件，一个抽象方法对应一个事件类型。
 
-默认的实现只有`EventPublishingRunListener`.
+其默认的实现只有`EventPublishingRunListener`.
 
 ```java
 // EventPublishingRunListener的构造函数
 public EventPublishingRunListener(SpringApplication application, String[] args) {
-    this.application = application;
-    this.args = args;
-    this.initialMulticaster = new SimpleApplicationEventMulticaster();
-    for (ApplicationListener<?> listener : application.getListeners()) {
-        this.initialMulticaster.addApplicationListener(listener);
-    }
+        this.application = application;
+        this.args = args;
+        this.initialMulticaster = new SimpleApplicationEventMulticaster();
+        for (ApplicationListener<?> listener : application.getListeners()) {
+            	this.initialMulticaster.addApplicationListener(listener);
+        }
 }
 ```
 
 从构造函数也可以看出,`EventPublishingRunListener`就是对广播器的一个封装,事件广播最终还是会通过`SimpleApplicationEventMulticaster`.
 
 详细的可以看[Spring的事件模型](./Spring的事件模型.md#SpringBoot启动过程中的事件)
+
+
 
 ### 3. 发布ApplicationStartingEvent
 
@@ -220,7 +222,7 @@ public EventPublishingRunListener(SpringApplication application, String[] args) 
 
 
 
-### 4. 创建并准备环境
+### 4. 创建并准备环境容器
 
 创建环境容器,并加载
 

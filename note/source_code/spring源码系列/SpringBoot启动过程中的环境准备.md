@@ -1,8 +1,8 @@
-#  SpringBoot启动流程中的环境配置
+#  SpringBoot启动流程中的环境准备过程
 
 
 
-- run方法中的环境准备只有一行代码，但是点开之后有点多的。
+- run方法中的环境准备只有一行代码，但是点开之后有点多的，巨多。
 
 ```java
 ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
@@ -10,39 +10,47 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 入参包括以下:
 
-applicationArguments包含了main方法中参数以及命令行参数.
+- applicationArguments - 包含了main方法中参数以及命令行参数.
 
-listeners则是SpringApplicationRunListeners的实现,默认的只有EventPublishingRunListener,用来广播事件.
+- listeners -  一般情况下是EventPublishingRunListener，在上下文未初始化完毕之前，充当广播器。
+
+单行代码也可以看出，该方法的主要作用就是**准备环境容器对象**。
+
+容器对象里面主要注意的就是Property和Profile两种配置。
+
+**Property就是传统的k/v配置，Java是主语言的应该都不陌生。**
+
+**Profiles简单来说就是对不同环境或者不同配置文件的切换配置，实际项目中通过修改该配置实现环境切换。**
 
 <!-- more -->
 
 ---
 
-
-
 [TOC]
 
 
 
-## 方法概述
+## SpringBoot的环境容器
 
 方法的主要目的就是加载各种环境配置,并返回一个`ConfigurableEnvironment`.
 
-首先明确返回的`ConfigurableEnvironment`指的是什么.
+因此首先简单了解一下`ConfigurableEnvironment`指的是什么.
 
-### Servlet的环境类
+Servlet Web的环境下,方法对应的环境容器类是`StandardServletEnvironment`.
 
-Servlet的环境下,对应的配置环境类是StandardServletEnvironment.
+以下是`StandardServletEnvironment`的类图：
 
  ![image-20200329155324385](../../../pic/image-20200329155324385.png)
 
-StandardServletEnvironment继承关系中
+StandardServletEnvironment继承关系中最上层的接口就是`PropertyResolver`,它提供了key/value（Property）类型的属性访问方法。
 
-最上层的接口就是`PropertyResolver`,它提供了key/value的属性访问.
+以下是`PropertyResolver`的方法签名：
 
  ![image-20200414221834267](../../../pic/image-20200414221834267.png)
 
-`Environment`接口扩展了对properties和profiles的属性访问,保存了active的profiles.
+`Environment`接口扩展了对profiles的属性访问,保存了active的profiles。
+
+profiles具体的定义待补充。
 
  ![image-20200414221802882](../../../pic/image-20200414221802882.png)
 
@@ -52,54 +60,60 @@ StandardServletEnvironment继承关系中
 
 接下来的一些接口就是对以上的整合和扩展,具体不细说了.
 
-以下是`StandardServletEnvironment`的基本属性:
+以下是最终获取的`StandardServletEnvironment`的基本结构:
 
  ![image-20200329160858010](../../../pic/image-20200329160858010.png)
 
-propertySources是具体的属性类,每个类都标志的不同的读取位置.
+propertySources是具体的属性类,每个类都标志的不同的读取位置。
 
-PropertyResolver则是属性解析器,里面定义了前后缀等内容.
+PropertyResolver则是属性解析器,里面定义了前后缀等内容。
+
+activeProfiles是激活的配置文件。
 
 
 
-## 主函数
+## 外层方法
 
 ```java
-	privTOCate ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
-			ApplicationArguments applicationArguments) {
-		// 获取或创建环境类,一样会根据不同的应用类型创建不同的环境容器类.
-		ConfigurableEnvironment environment = getOrCreateEnvironment();
+// SpringApplication	
+private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
+                                                      ApplicationArguments applicationArguments) {
+        // 获取或创建环境类，同样的的此处会根据不同的应用类型创建不同的环境容器类。
+        ConfigurableEnvironment environment = getOrCreateEnvironment();
         // 配置环境
-		configureEnvironment(environment, applicationArguments.getSourceArgs());
-		ConfigurationPropertySources.attach(environment);
+        configureEnvironment(environment, applicationArguments.getSourceArgs());
+    	// 在将当前环境中的PropertySource保留一份自己的副本
+        ConfigurationPropertySources.attach(environment);
         // 发布ApplicationEnvironmentPreparedEvent
-		listeners.environmentPrepared(environment);
+        listeners.environmentPrepared(environment);
         // 将环境绑定到SpringApplication中
-		bindToSpringApplication(environment);
-		if (!this.isCustomEnvironment) {
-			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
-					deduceEnvironmentClass());
-		}
-		ConfigurationPropertySources.attach(environment);
-		return environment;
-	}
+        bindToSpringApplication(environment);
+    	// 如果要使用自定义的环境容器，此时则需要转换下对象
+        if (!this.isCustomEnvironment) {
+            	environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
+                                                                                                   deduceEnvironmentClass());
+        }
+    	// 覆盖之前的副本，可能在中间环节会让PropertySource指向的引用改变
+        ConfigurationPropertySources.attach(environment);
+        return environment;
+}
 ```
 
 
 
 
 
-## 创建环境类
+## getOrCreateEnvironment - 创建环境类
 
 - 根据不同的应用类型创建不同的环境类型。
-- 常用的servlet使用`StandardservletEnvironment`类作为环境容器。
+- Servlet Web环境使用`StandardservletEnvironment`类作为环境容器。
 
 ```java
-	private ConfigurableEnvironment getOrCreateEnvironment() {
-        // 如果已经有环境类的话就直接返回.
-		if (this.environment != null) {
-			  return this.environment;
-		}
+private ConfigurableEnvironment getOrCreateEnvironment() {
+    	// 如果已经有环境类的话就直接返回.
+        if (this.environment != null) {
+            return this.environment;
+        }
         // 简单switch
         switch (this.webApplicationType) {
             case SERVLET:
@@ -108,18 +122,20 @@ PropertyResolver则是属性解析器,里面定义了前后缀等内容.
                 return new StandardReactiveWebEnvironment();
             default:
                 return new StandardEnvironment();
-		}
-	}
+        }
+}
 ```
 
+该方法就是负责先创建出具体的容器类。
 
 
-## 配置Property和Profiles
+
+## configureEnvironment - 配置Property和Profiles
 
 ```java
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
    if (this.addConversionService) {
-       // 单例模式的获取一个ConversionService对象
+       // 单例模式，获取一个ConversionService对象
       ConversionService conversionService = ApplicationConversionService.getSharedInstance();
       environment.setConversionService((ConfigurableConversionService) conversionService);
    }
@@ -128,78 +144,101 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 }
 ```
 
-1. 配置ConversionService
-2. 配置PropertySource
-3. 配置Profiles
+**该方法主要配置Property的属性源，以及Profiles属性。**
+
+另外有时还会配置一个ConversionService对象,具体未知，留坑。
 
 
 
 #### Profiles配置
 
 ```java
-	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
-		Set<String> profiles = new LinkedHashSet<>(this.additionalProfiles);
-		profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
-		environment.setActiveProfiles(StringUtils.toStringArray(profiles));
-	}
+protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
+        Set<String> profiles = new LinkedHashSet<>(this.additionalProfiles);
+        profiles.addAll(Arrays.asList(environment.getActiveProfiles()));
+        environment.setActiveProfiles(StringUtils.toStringArray(profiles));
+}
 ```
+
+- 简单结合当前应用启动类和环境类中的Profile配置。
 
 
 
 #### PropertySource配置
 
 ```java
-	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
-        // propertySource就是环境中的配置源
-		MutablePropertySources sources = environment.getPropertySources();
-        // 配置默认的属性
-		if (this.defaultProperties != null && !this.defaultProperties.isEmpty()) {
-			sources.addLast(new MapPropertySource("defaultProperties", this.defaultProperties));
-		}
+// CommandLinePropertySource
+public static final String COMMAND_LINE_PROPERTY_SOURCE_NAME = "commandLineArgs";
+
+// SpringApplication
+protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
+        // propertySource就是环境中配置源
+    	// 获取PropertySource
+        MutablePropertySources sources = environment.getPropertySources();
+        // 配置默认的属性，默认的属性可以通过别的方式塞进去，默认好像是没有默认属性
+    	// 应该是在创建ApplicationContext的时候手动Set
+        if (this.defaultProperties != null && !this.defaultProperties.isEmpty()) {
+            	sources.addLast(new MapPropertySource("defaultProperties", this.defaultProperties));
+        }
         // 配置命令行参数
         // 都是包装成SimpleCommandLinePropertySource
-		if (this.addCommandLineProperties && args.length > 0) {
-			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
-            // 如果存在则加入到原命令行参数的集合中
-			if (sources.contains(name)) {
-				PropertySource<?> source = sources.get(namApplicationEnvironmentPreparedEvente);
-				CompositePropertySource composite = new CompositePropertySource(name);
-				composite.addPropertySource(
-						new SimpleCommandLinePropertySource("springApplicationCommandLineArgs", args));
-				sources.replace(name, composite);
-			}
-			else {
-				sources.addFirst(new SimpleCommandLinePropertySource(args));
-			}
-		}
-	}
+        if (this.addCommandLineProperties && args.length > 0) {
+                String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
+                // 如果存在则加入到原命令行参数的集合中
+                if (sources.contains(name)) {
+                        PropertySource<?> source = sources.get(namApplicationEnvironmentPreparedEvente);
+                        CompositePropertySource composite = new CompositePropertySource(name);
+                        composite.addPropertySource(
+                            new SimpleCommandLinePropertySource("springApplicationCommandLineArgs", args));
+                        sources.replace(name, composite);
+                   } else {
+                            sources.addFirst(new SimpleCommandLinePropertySource(args));
+                   }
+        }
+}
 ```
 
+该方法主要由以下两步：
+
+1. 配置默认的配置源
+2. 配置命令行参数
+
+PropertySource是放在末尾的，命令行参数是放在开头的，也不知道有啥区别。
 
 
-## 附加属性配置
 
-- **环境中的propertySources属性会在其内存**
-- prepareEnvironment方法中调用了两次，暂时还不知道什么用处。
+
+
+## ConfigurationPropertySources.attach - 附加属性配置
 
 ```java
-	public static void attach(Environment environment) {
-		Assert.isInstanceOf(ConfigurableEnvironment.class, environment);
-        // 获取环境中的propertySources
-				composite.addPropertySource(source);调用了两边，
-		MutablePropertySources sources = ((ConfigurableEnvironment) environment).getPropertySources();
-        // propertySources中的附加属性源属性
-		PropertySource<?> attached = sources.get(ATTACHED_PROPERTY_SOURCE_NAME);
-		if (attached != null && attached.getSource() != sources) {
-			sources.remove(ATTACHED_PROPERTY_SOURCE_NAME);
-			attached = null;
-		}
-		if (attached == null) {
-			sources.addFirst(new ConfigurationPropertySourcesPropertySource(ATTACHED_PROPERTY_SOURCE_NAME,
-					new SpringConfigurationPropertySources(sources)));
-		}
-	}
+private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";
+
+// ConfigurationPropertySources
+public static void attach(Environment environment) {
+        Assert.isInstanceOf(ConfigurableEnvironment.class, environment);
+    	// 获取环境类的PropertySource，第二步也有配置这个
+        MutablePropertySources sources = ((ConfigurableEnvironment) environment).getPropertySources();
+    	// 获取该属性的Value，我debug的Servlet Web环境下为空
+        PropertySource<?> attached = sources.get(ATTACHED_PROPERTY_SOURCE_NAME)；
+         //  不为空并且里面的数据和当前想要配置的数据不同就删了
+        if (attached != null && attached.getSource() != sources) {
+                sources.remove(ATTACHED_PROPERTY_SOURCE_NAME);
+                attached = null;
+        }
+    	// 将自己的作为配置源信息的一部分塞回去
+        if (attached == null) {
+            	sources.addFirst(new ConfigurationPropertySourcesPropertySource(ATTACHED_PROPERTY_SOURCE_NAME,
+                                                                            new SpringConfigurationPropertySources(sources)));
+        }
+}
 ```
+
+该方法主要是想要在PropertySources中保留一份自己的副本。
+
+就算之前有但是如果和当前Source不同也会先删除，保证副本和当前环境的一致性。
+
+
 
 
 
@@ -215,7 +254,7 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 
 
-## 绑定环境
+## bindToSpringApplication - 绑定环境
 
 将准备好的容器环境绑定到当前的上下文。
 
@@ -233,13 +272,23 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 
 
+## 第二次Attach
+
+猜测是因为在绑定环境或者中间其他步骤中会直接替换整个的PropertySource的引用，所以此时要重新填充自举的属性。
+
 
 
 ## 总结
 
-`prepareEnvironment`方法的主要作用就是准备环境,整合各个来源中的配置.
+`prepareEnvironment`方法的主要作用就是准备环境,整合各个来源中的配置，并全部配置到Environment的实现类中。
+
+如开头所说，配置中最主要的两块内容是Property和Profiles。
+
+Property除了加载别的属性之后，一他会存放一份副本在他的集合中，二还有一些默认配置和命令行配置。
+
+总体的流程如下：
 
 1. 创建环境类实例
-2. 添加命令行参数等一些配置到实例中
+2. 添加默认参数，命令行参数等一些配置到实例中，并配置Profile
 3. 触发`ApplicationEnvironmentPreparedEvent`，读取配置文件到环境中
 4. 将创建好的环境对象与当前的SpringApplication对象绑定

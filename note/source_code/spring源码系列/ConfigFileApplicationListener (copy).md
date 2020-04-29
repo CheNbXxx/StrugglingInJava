@@ -1,63 +1,30 @@
-# ApplicationEnvironmentPreparedEvent事件的监听
+## ApplicationEnvironmentPreparedEvent
 
 - 太多Java8的Lambda表达式了看起来头好痛
-- 该事件是在run方法中环境准备阶段发布的，此时Environment容器刚创建好。
 
-下图就是Servlet Web环境触发的Listener列表：
-
-![image-20200328225600035](../../../pic/image-20200328225600035.png)
-
-本文的主要分析是ConfigFileApplicationListener对ApplicationEnvironmentPreparedEvent的响应逻辑。
-
-<!-- more -->
-
----
-
-[TOC]
+  
 
 
 
-## ConfigFileApplicationListener
-
-该类会响应ApplicationEnvironmentPreparedEvent以及ApplicationPreparedEvent两个时间。
-
-接下来主要是对ApplicationEnvironmentPreparedEvent事件的响应。
+在SpringBoot启动初期准备环境时发布的事件.
 
 ```java
-// 响应的调度方法
-// 根据事件的具体类型来决定触发逻辑。
-@Override
-public void onApplicationEvent(ApplicationEvent event) {
-       if (event instanceof ApplicationEnvironmentPreparedEvent) {
-           	// 对ApplicationEnvironmentPreparedEvent的响应方法
-          	onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
-       }
-       if (event instanceof ApplicationPreparedEvent) {
-          	onApplicationPreparedEvent(event);
-       }
-}
-```
-
-
-
-### onApplicationEnvironmentPreparedEvent 
-
-```java
-private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
+	private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
         // 工厂模式获取所有的EnvironmentPostProcessor
-        List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
+		List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
         // ConfigFileApplicationListener也作为一个EnvironmentPostProcessor加入调用链
-        postProcessors.add(this);
+		postProcessors.add(this);
         // 按照Order排序
-        AnnotationAwareOrderComparator.sort(postProcessors);
-    	// 遍历执行
-        for (EnvironmentPostProcessor postProcessor : postProcessors) {
-            	postProcessor.postProcessEnvironment(event.getEnvironment(), event.getSpringApplication());
-        }
-}
+		AnnotationAwareOrderComparator.sort(postProcessors);
+		for (EnvironmentPostProcessor postProcessor : postProcessors) {
+			postProcessor.postProcessEnvironment(event.getEnvironment(), event.getSpringApplication());
+		}
+	}
 ```
 
-Debug时发现的`EnvironmentPostProcessor`有以下几个：
+
+
+Debug时自带的`EnvironmentPostProcessor`
 
  ![image-20200329203541928](../../../pic/image-20200329203541928.png)
 
@@ -65,52 +32,33 @@ SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的�
 
 其他的就先忽略.
 
-该方法主要就是逻辑如下：
-
-1. 通过工厂加载模式获取EnvironmentPostProcessor，加上监听器本身。
-2. 按照Order排序后，遍历执行postProcessEnvironment方法。
-
-可以看到Spring对环境的加载过程也可以借助EnvironmentPostProcessor来实现自定义的加载。
-
-我猜Consul等的配置中心会不会就是通过的这种方式。
 
 
+#### ConfigFileApplicationListener#postProcessEnvironment
 
----
-
-以下来分析具体的EnvironmentPostProcessor的执行逻辑。
-
-
-
-
-
-### ConfigFileApplicationListener#postProcessEnvironment
-
-ConfigFileApplicationListener本身也继承了EnvironmentPostProcessor，所以此时也会被调用。
+主要还是ConfigFileApplicationListener的postProcessEnvironment方法.
 
 ```java
 //  ConfigFileApplicationListener
 @Override
 public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-    	addPropertySources(environment, application.getResourceLoader());
+    addPropertySources(environment, application.getResourceLoader());
 }
 
 protected void addPropertySources(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
-        // 此处添加了一个随机数 ,作用未知
-        RandomValuePropertySource.addToEnvironment(environment);
-        // 这里应该就是加载配置文件的过程了 
-        new Loader(environment, resourceLoader).load();
-}
+       // 此处添加了一个随机数 ,作用未知
+		RandomValuePropertySource.addToEnvironment(environment);
+    	// 这里应该就是加载配置文件的过程了 
+		new Loader(environment, resourceLoader).load();
+	}
 ```
 
-这里只有两张代码，你敢信吗？
+主要作用:
 
-主要作用如下:
+1. 添加一个随机数到配置中`environment.propertySource`
+2. 加载本地配置文件.
 
-1. 添加一个随机数到配置中`environment.propertySource`。
-2. 加载本地配置文件
-
-
+   
 
 #### 随机数的作用
 
@@ -122,67 +70,34 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 上面就是RandomValuePropertySource的类注释.
 
-大意应该是下标超越random的属性都是非法的.
+大意应该是超越random的属性都是非法的.
 
 
 
-#### Loader类的初始化
+#### 加载配置文件
 
 ```java
+// ConfigFileApplicationListener
+new Loader(environment, resourceLoader).load();
+
 // ConfigFileApplicationListener@Loader
 Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
     // 配置了环境,占位符解析器,资源加载器,还有propertySourceLoader
     this.environment = environment;
-    // 占位符处理
     this.placeholdersResolver = new PropertySourcesPlaceholdersResolver(this.environment);
-    // 资源加载器
     this.resourceLoader = (resourceLoader != null) ? resourceLoader : new DefaultResourceLoader();
-    // 工厂加载模式加载PropertySourceLoader
     this.propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class,
                                                                      getClass().getClassLoader());
 }
 ```
 
-
-
-##### 占位符处理器
-
-以下是placeholdersResolver的构造函数
-
-```java
-// SystemPropertyUtils
-public static final String PLACEHOLDER_PREFIX = "${";
-public static final String PLACEHOLDER_SUFFIX = "}";
-public static final String VALUE_SEPARATOR = ":";
-
-// PropertySourcesPlaceholdersResolver
-public PropertySourcesPlaceholdersResolver(Environment environment) {
-    		this(getSources(environment), null);
-}
-
-// PropertySourcesPlaceholdersResolver
-public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, PropertyPlaceholderHelper helper){
-            this.sources = sources;
-            this.helper = (helper != null) 
-                ? helper
-            	: new PropertyPlaceholderHelper(SystemPropertyUtils.PLACEHOLDER_PREFIX,
-                                                                            SystemPropertyUtils.PLACEHOLDER_SUFFIX, SystemPropertyUtils.VALUE_SEPARATOR, true);
-}
-```
-
-可以看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"。
-
-另外工厂模式获取到的两个PropertySourceLoader如下：
+获取到的两个PropertySourceLoader
 
  ![image-20200329205729718](../../../pic/image-20200329205729718.png)
 
 
 
-此时Loader初始化完毕，其中制定了资源加载器，占位符，以及两个不同类型的资源加载器，分别负责不同类型的文件配置加载。
-
-
-
-再然后就是整个配置文件加载过程了，方法调用链有点长而且好多load重载方法.
+以下就是整个配置文件加载过程的方法调用链,有点长而且好多load方法.
 
 #### load方法
 
@@ -191,10 +106,10 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 private static final String DEFAULT_PROPERTIES = "defaultProperties";
 private static final Set<String> LOAD_FILTERED_PROPERTY;
 static {
-        Set<String> filteredProperties = new HashSet<>();
-        filteredProperties.add("spring.profiles.active");
-        filteredProperties.add("spring.profiles.include");
-        LOAD_FILTERED_PROPERTY = Collections.unmodifiableSet(filteredProperties);
+    Set<String> filteredProperties = new HashSet<>();
+    filteredProperties.add("spring.profiles.active");
+    filteredProperties.add("spring.profiles.include");
+    LOAD_FILTERED_PROPERTY = Collections.unmodifiableSet(filteredProperties);
 }
 
 // ConfigFileApplicationListener#load
