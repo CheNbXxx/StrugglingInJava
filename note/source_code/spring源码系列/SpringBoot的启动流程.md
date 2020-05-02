@@ -155,7 +155,16 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 
 
 
-### 1. 配置Headless
+### 1.启动计时器
+
+```java
+StopWatch stopWatch = new StopWatch();
+stopWatch.start();
+```
+
+
+
+### 2. 配置Headless
 
 ```java
 private static final String SYSTEM_PROPERTY_JAVA_AWT_HEADLESS = "java.awt.headless";
@@ -173,7 +182,7 @@ Headless模式是应用的一种配置模式。
 
 
 
-### 2. 获取并启动监听器
+### 3. 获取并启动监听器
 
 ```java
 // SpringApplication
@@ -224,91 +233,81 @@ public EventPublishingRunListener(SpringApplication application, String[] args) 
 
 ### 4. 创建并准备环境容器
 
-创建环境容器,并加载
+创建环境容器,并加载.
+
+```java
+ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+```
 
 [SpringBoot启动过程中的环境准备](./SpringBoot启动过程中的环境准备.md)
 
+**该方法中主要配置了Property以及Profile属性，发布ApplicationEnvironmentPreparedEvent事件。**
+
+**并在该时间的响应中通过`ConfigFileApplicationListener`读取了配置文件的所有配置。**
 
 
-## 创建应用上下文
 
-逻辑很简单，根据不同的Web应用类型创建对应的上下文类
+### 5. 配置忽略的Bean信息
+
+```java
+public static final String IGNORE_BEANINFO_PROPERTY_NAME = "spring.beaninfo.ignore";
+
+// SpringApplication
+private void configureIgnoreBeanInfo(ConfigurableEnvironment environment) {
+        if (System.getProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME) == null) {
+                Boolean ignore = environment.getProperty("spring.beaninfo.ignore", Boolean.class, Boolean.TRUE);
+                System.setProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME, ignore.toString());
+        }
+}
+```
+
+方法逻辑很简单，就是在系统配置中没有`spring.beaninfo.ignore`时，将当前环境容器中的对应属性塞进去。
+
+`spring.beaninfo.ignore`的作用待补充。
+
+
+
+### 6. 输出Banner
+
+```java
+Banner printedBanner = printBanner(environment);
+```
+
+一家人就应该整整齐齐所以我把代码放这里，但Banner相关的事情我觉得可以先忽略。
+
+
+
+### 7.  创建应用上下文
+
+逻辑很简单，**根据不同的Web应用类型创建对应的上下文类**，具体对应关系如下：
 
 - Default - `AnnotationConfigApplicationContext`
 - Servlet - `AnnotationConfigServletWebServerApplicationContext`
 - Reactive - `AnnotationConfigReactiveWebServerApplicationContext`
 
+推断应用类型也是在SpringApplication的构造函数中实现的。
 
-
-## 准备上下文
-
-- 应用`ApplicationContextInitializer`
-- 上下文准备完成事件
-- 注册特定的一些单例Bean对象（包‘括banner）
-- 加载应用上下文
-- 上下文加载完成事件
+以下是`AnnotationConfigServletWebServerApplicationContext`的构造函数：
 
 ```java
-	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
-			SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner) {
-        // 设置环境
-        // 不仅仅配置到上下文，也会配置到上下文中的BeanDefinitionReader和Scanner
-		context.setEnvironment(environment);
-		postProcessApplicationContext(context);
-        // 应用所有的ApplicationContextInitializer类
-        // 此时的类都是在Application的构造函数中通过工厂加载机制获取的
-		applyInitializers(context);
-        // 发布ApplicationContextInitializedEvent
-		listeners.contextPrepared(context);
-		if (this.logStartupInfo) {
-			logStartupInfo(context.getParent() == null);
-			logStartupProfileInfo(context);
-		}
-		// 塞几个特定的bean
-        // spring的启动参数bean
-		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
-        // 命令行参数的Bean
-		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
-		if (printedBanner != null) {
-             // banner为啥也要塞进来。。。。
-			beanFactory.registerSingleton("springBootBanner", printedBanner);
-		}
-        // 设置是否允许bean对象的覆盖
-        // 默认是false
-		if (beanFactory instanceof DefaultListableBeanFactory) {
-			((DefaultListableBeanFactory) beanFactory)
-					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
-		}
-		if (this.lazyInitialization) {
-			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
-		}
-		// 获取所有的配-置，包含SpringApplication中的sources和primarySources
-		Set<Object> sources = getAllSources();
-		Assert.notEmpty(sources, "Sources must not be empty");
-		load(context, sources.toArray(new Object[0]));
-         // 发布ApplicationPreparedEvent
-		listeners.contextLoaded(context);
-	}
-
-```
-
-# 
-
-## 1.ApplicationContextInitializer  -  引用上下文初始化
-
-```java
-public interface ApplicationContextInitializer<C extends ConfigurableApplicationContext> {
-	/**
-	 * Initialize the given application context.
-	 * @param applicationContext the application to configure
-	 */
-	void initialize(C applicationContext);
+public AnnotationConfigServletWebServerApplicationContext() {
+        this.reader = new AnnotatedBeanDefinitionReader(this);
+        this.scanner = new ClassPathBeanDefinitionScanner(this);
 }
 ```
 
-在refresh方法之前会调用的回调方法。
+可以看到初始化的时候顺带初始化了BeanDefinitionReader和BeanDefinitionScanner
 
-以`ConfigurableApplicationContext`为入参，可以对其进行修改。
 
-可以使用`@Order`或者Ordered接口进行排序。
 
+## 8. 准备上下文
+
+```java
+prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+```
+
+该方法主要作用如下：
+
+1. 执行所有的ApplicationContextInitializer类
+2. 发布ApplicationContextInitializedEvent
+3. 加载所有的BeanDefinition

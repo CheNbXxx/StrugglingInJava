@@ -379,11 +379,11 @@ private void load(String location, String name, Profile profile, DocumentFilterF
 
 - 这个调用链真的太长了..还都是load方法 我选择放弃,有空再来吧
 
+其他的监听器也以后再说吧。
 
+## 小结
 
-### 小结
-
-ConfigFileApplicationListener会被ApplicationEnvironmentPreparedEvent触发,开始加载配置文件.
+ConfigFileApplicationListener会被Applica生徒に授業を乗っ取られた巨乳女教師 君島みおtionEnvironmentPreparedEvent触发,开始加载配置文件.
 
 配置文件默认在`classpath:/,classpath:/config/,file:./,file:./config/`四个地址中,且默认文件名为`application`
 
