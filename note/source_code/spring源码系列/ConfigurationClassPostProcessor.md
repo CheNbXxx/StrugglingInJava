@@ -1,6 +1,6 @@
 ## ConfigurationClassPostProcessor
 
-该类实现了BeanDefinitionRegistryPostProcessor，在上下文准备阶段被调用。
+该类实现了BeanDefinitionRegistryPostProcessor，在上下文刷新阶段被调用。
 
 会加载并引用所有的JavaConfig类。
 
@@ -18,9 +18,9 @@
 
 图中可以看到，ConfigurationClassPostProcessor实现了BeanDefinitionRegistryPostProcessor接口，另外还有PriorityOrdered，以及一串的XXXXAware接口。
 
-Aware接口会在创建该对象的时候注入进依赖，但是调用是发生在上下文准备阶段，不知道这个注入如何实现。
+Aware接口会在创建该对象的时候注入进依赖，但是调用是发生在上下文刷新阶段，不知道这个注入如何实现。
 
-BeanDefinitionRegistryPostProcessor接口子类会在准备阶段统一被调用。
+BeanDefinitionRegistryPostProcessor接口子类会在刷新阶段统一被调用。
 
 实现了PriorityOrdered则说明相比于实现了Ordered的以及普通的，该类具有较高的执行优先级。
 
@@ -32,9 +32,9 @@ BeanDefinitionRegistryPostProcessor接口子类会在准备阶段统一被调用
 
  ![image-20200502232439693](/home/chen/github/_java/pic/image-20200502232439693.png)
 
-**该类具有最低优先级，所以任何实现了BeanDefinitionRegistryPostProcessor和PriorityOrdered接口的类都会在其之前被执行。**
+根据PriorityOrdered的重载方法。
 
-
+该类具有最低优先级，所以任何实现了BeanDefinitionRegistryPostProcessor和PriorityOrdered接口的类都会在其之前被执行。**
 
 BeanPostProcessor执行流程相关内容可以看下面：
 
@@ -80,22 +80,26 @@ public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
         for (String beanName : candidateNames) {
             	// 通过遍历名称来遍历BeanDefinition
                 BeanDefinition beanDef = registry.getBeanDefinition(beanName);
-            	// 获取属性
+            	// 判断属性是否为空，该属性具体作用未知。
+            	// 猜测应该是配置文件是否已经加载的标志
                 if (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != null) {
                         if (logger.isDebugEnabled()) {
                             	logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
                         }
+                // 检查是否符合Configuration类
                 } else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
                     	configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
                 }
         }
 
         // Return immediately if no @Configuration classes were found
+    	// 若Configuration类为空，直接退出，好理解
         if (configCandidates.isEmpty()) {
             return;
         }
 
         // Sort by previously determined @Order value, if applicable
+    	// 根据Order排序，主要是获取BeanDefinition里的getOrdered的返回值
         configCandidates.sort((bd1, bd2) -> {
             int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
             int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
@@ -103,6 +107,7 @@ public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
         });
 
         // Detect any custom bean name generation strategy supplied through the enclosing application context
+    	// 
         SingletonBeanRegistry sbr = null;
         if (registry instanceof SingletonBeanRegistry) {
             sbr = (SingletonBeanRegistry) registry;
