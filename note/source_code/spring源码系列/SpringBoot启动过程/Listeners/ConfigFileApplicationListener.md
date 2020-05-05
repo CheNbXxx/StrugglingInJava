@@ -1,13 +1,6 @@
-# ApplicationEnvironmentPreparedEvent事件的监听
+# ConfigFileApplicationListener
 
-- 太多Java8的Lambda表达式了看起来头好痛
-- 该事件是在run方法中环境准备阶段发布的，此时Environment容器刚创建好。
-
-下图就是Servlet Web环境触发的Listener列表：
-
-![image-20200328225600035](../../../pic/image-20200328225600035.png)
-
-本文的主要分析是ConfigFileApplicationListener对ApplicationEnvironmentPreparedEvent的响应逻辑。
+> ConfigFileApplicationListener就是SpringBoot启动过程中加载配置文件的监听器。
 
 <!-- more -->
 
@@ -17,7 +10,7 @@
 
 
 
-## ConfigFileApplicationListener
+## 概述
 
 该类会响应ApplicationEnvironmentPreparedEvent以及ApplicationPreparedEvent两个时间。
 
@@ -40,7 +33,7 @@ public void onApplicationEvent(ApplicationEvent event) {
 
 
 
-### onApplicationEnvironmentPreparedEvent 
+## #onApplicationEnvironmentPreparedEvent 
 
 ```java
 private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
@@ -59,7 +52,7 @@ private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPrepare
 
 Debug时发现的`EnvironmentPostProcessor`有以下几个：
 
- ![image-20200329203541928](../../../pic/image-20200329203541928.png)
+ ![image-20200329203541928](../../../../../pic/image-20200329203541928.png)
 
 SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的系统属性.
 
@@ -84,7 +77,7 @@ SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的�
 
 
 
-### ConfigFileApplicationListener#postProcessEnvironment
+## #postProcessEnvironment
 
 ConfigFileApplicationListener本身也继承了EnvironmentPostProcessor，所以此时也会被调用。
 
@@ -112,7 +105,7 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 
 
-#### 随机数的作用
+### 随机数的作用
 
 添加的随机数如下:
 
@@ -126,7 +119,7 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 
 
-#### Loader类的初始化
+### Loader类的初始化
 
 ```java
 // ConfigFileApplicationListener@Loader
@@ -145,7 +138,7 @@ Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
 
 
 
-##### 占位符处理器
+#### 占位符处理器
 
 以下是placeholdersResolver的构造函数
 
@@ -184,7 +177,7 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 
 再然后就是整个配置文件加载过程了，方法调用链有点长而且好多load重载方法.
 
-#### load方法
+### load方法
 
 ```java
 // ConfigFileApplicationListener
@@ -247,7 +240,7 @@ static void apply(ConfigurableEnvironment environment, String propertySourceName
 
 
 
-#### ConfigFileApplicationListener#initializeProfiles
+### ConfigFileApplicationListener#initializeProfiles
 
 ```java
 
@@ -288,7 +281,7 @@ private Set<Profile> getProfilesFromProperty(String profilesProperty) {
 
 
 
-#### ConfigFileApplicationListener#load
+### ConfigFileApplicationListener#load
 
 ```java
 // ConfigFileApplicationListener#load

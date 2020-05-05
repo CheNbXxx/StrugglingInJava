@@ -1,14 +1,16 @@
 # PostProcessorRegistrationDelegate
 
-
+> Spring上下文刷新过程中看到，衍生出来单独阅读一下源码。
 
 看名字就知道和Spring中的PostProcessor有关.
 
-从上下文刷新方法中切入,该类作为一个工具类执行一些上下文的注册和调用任务,可能就是减少主类的代码长度吧.
+该类从上下文刷新的方法中切入,作为一个工具类执行一些上下文的钩子方法,
 
-具体方法如下:
+独立成一个类的原因，可能就是减少主类的代码长度吧.
 
-![image-20200426221929670](../../../pic/image-20200426221929670.png)
+类中具体方法如下:
+
+![image-20200426221929670](../../../../pic/image-20200426221929670.png)
 
 公开的方法只有两个:
 
@@ -25,34 +27,51 @@
 
 
 
-## invokeBeanFactoryPostProcessor - 调用BeanFactoryPostProcessor
+## 相关接口概述
 
-- 对BeanFactoryPostProcessors的调用以refresh方法的invokeBeanFactoryPostProcessors作为切入点.
-
-![image-20200415141624287](/home/chen/github/_java/pic/image-20200415141624287.png) 
+就是钩子方法的上层接口。
 
 
 
-### 相关接口
-
-#### BeanFactoryPostProcessor
+### BeanFactoryPostProcessor
 
 - BeanFactoryPostProcessor是SpringBoot中的扩展点之一,IOC容器级别钩子方法.
 - **该接口可以在标准初始化之前,自定义修改BeanDefinition,但并不建议在里面对Bean进行初始化.**
 
- ![image-20200416221805389](../../../pic/image-20200416221805389.png)
+ ![image-20200416221805389](../../../../pic/image-20200416221805389.png)
 
 
 
-#### BeanDefinitionRegistryPostProcessor
+### BeanDefinitionRegistryPostProcessor
 
 - 该接口是`BeanFactoryPostProcessor`的扩展,继承了BeanFactoryPostProcessor.
 - **实现该接口可以在标准初始化之前修改Bean的注册信息,比如额外多注册一些Bean之类.**
 
- ![image-20200416222347446](../../../pic/image-20200416222347446.png)
+ ![image-20200416222347446](../../../../pic/image-20200416222347446.png)
 
 
 
+### BeanPostProcessor接口
+
+BeanPostProcessor接口是SpringIOC容器中主要的扩展点.
+
+SpringAOP的实现也需要使用该接口,在合适的机会替换原始类,使用代理或者增强的类
+
+该接口主要的方法如下图:
+
+ ![image-20200426223449436](../../../../pic/image-20200426223449436.png)
+
+接口中仅有两个方法,根据方法名应该也直到执行的顺序了.
+
+- 在Bean初始化之前会调用 - postProcessBeforeInitialization.
+
+- 在Bean初始化之后会调用 - postProcessAfterInitialization.
+
+BeanPostProcessor的两个钩子方法的执行穿插在Bean的生命周期中,所以Delegate类并不会有任何调用方法.
+
+
+
+## 具体方法
 
 
 ### #invokeBeanFactoryPostProcessors
@@ -156,7 +175,7 @@ public static void invokeBeanFactoryPostProcessors(
 
 
 
-### BeanFactoryPostProcessor的执行顺序总结
+#### 执行顺序小结结
 
 执行的代码就是取一些执行一些并没有什么难度,具体的执行流程如下:
 
@@ -171,13 +190,13 @@ public static void invokeBeanFactoryPostProcessors(
 
 
 
-### 重点BeanFactoryPostProcessor类
+#### 重点BeanFactoryPostProcessor类
 
 以下以SpringBoot Servelet Web应用为切入点.
 
 最初的三个入参BeanFactoryPostProcessor:
 
-  ![image-20200425220536920](../../../pic/image-20200425220536920.png)
+  ![image-20200425220536920](../../../../pic/image-20200425220536920.png)
 
 其中的前两个在执行流程第一步就是被执行.
 
@@ -187,7 +206,7 @@ public static void invokeBeanFactoryPostProcessors(
 
 以下是四五步执行的PostProcessor列表.
 
- ![image-20200425225930957](../../../pic/image-20200425225930957.png)
+ ![image-20200425225930957](../../../../pic/image-20200425225930957.png)
 
 其中有`ConfigurationClassPostProcessor`和`ConfigFileApplicationListener$PropertySourceOrderingPostProcessor`比较重要.
 
@@ -195,17 +214,17 @@ public static void invokeBeanFactoryPostProcessors(
 
 继承PriorityOrdered的BeanPostProcessor.
 
- ![image-20200425230316550](../../../pic/image-20200425230316550.png)
+ ![image-20200425230316550](../../../../pic/image-20200425230316550.png)
 
 继承Ordered的BeanPostProcessor
 
- ![image-20200425230338194](../../../pic/image-20200425230338194.png)
+ ![image-20200425230338194](../../../../pic/image-20200425230338194.png)
 
 以下是其他的BeanPostProcessor.
 
 其中TestBeanPostProcessor是我个人测试的类.
 
- ![image-20200425230356693](../../../pic/image-20200425230356693.png)
+ ![image-20200425230356693](../../../../pic/image-20200425230356693.png)
 
 
 
@@ -213,43 +232,20 @@ public static void invokeBeanFactoryPostProcessors(
 
 感觉每个类都是一部短篇小说,但是人物剧情很复杂的那种.
 
----
+太多了，说不定我读到一半就转行了。
 
 
 
-## registerBeanPostProcessors - 注册BeanPostProcessors
-
-也是一个独立出来的方法,不禁害怕接下来的代码该是多长竟然还需要独立.
 
 
-
-### BeanPostProcessor接口
-
-BeanPostProcessor接口是SpringIOC容器中主要的扩展点.
-
-SpringAOP的实现也需要使用该接口,在合适的机会替换原始类,使用代理或者增强的类
-
-该接口主要的方法如下图:
-
- ![image-20200426223449436](../../../pic/image-20200426223449436.png)
-
-接口中仅有两个方法,根据方法名应该也直到执行的顺序了.
-
-- 在Bean初始化之前会调用postProcessBeforeInitialization.
-
-- 在Bean初始化之后会调用postProcessAfterInitialization.
-
-BeanPostProcessor的两个钩子方法的执行穿插在Bean的生命周期中,所以Delegate类并不会有任何调用方法.
-
-
-
-### #registerBeanPostProcessors - 注册registerBeanProcessor
+### #registerBeanPostProcessors 
 
 ```java
 // PostProcessorRegistrationDelegate
 public static void registerBeanPostProcessors(
       ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 	// 获取BeanFactory里所有的BeanPostProcessor的实现类
+    // 可以看到BeanPostProcessor是从BeanFactory中获取的。
    String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
    // 增加一个BeanPostProcessor
@@ -314,18 +310,15 @@ public static void registerBeanPostProcessors(
 }
 ```
 
-代码其实也很简单,因为没有执行逻辑,就看注册顺序:
+Hhhh，这里就是注册，好像也不需要管顺序不顺序的。
 
-1. 先注册实现了PriorityOrdered的
-2. 再注册实现了Ordered的
-3. 最后注册其他的
-4. 重新注册继承了MergedBeanDefinitionPostProcessor的
+**唯一注意的就是BeanPostProcess在第一步中是从BeanFactory中获取的，所以想要自定义BeanPostProcess生效，就必须在该方法之前注入进BeanFactory，或者在BeanPostProcess中注册另外一个BeanPostProcess。**
 
 
 
-### 重点BeanPostProcessor子类
+#### 重点BeanPostProcessor子类
 
- ![image-20200426233628495](../../../pic/image-20200426233628495.png)
+ ![image-20200426233628495](../../../../pic/image-20200426233628495.png)
 
 上图是SpringBoot Servlet Web应用下的BeanPostProcessor的情况.
 

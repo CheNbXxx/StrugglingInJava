@@ -30,7 +30,7 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
 我以为SpringBoot Servlet Web为例子，Debug发现仅会将运行的主类的BeanDefinition注册。
 
-具体的加载所有BeanDefinition的地方是ConfigurationClassPostProcessor类，详细可以看下文：
+具体的加载所有BeanDefinition的地方是ConfigurationClassPostProcessor类，详细可以看下文。
 
 
 
@@ -52,11 +52,13 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
 
 
+
+
 ## 构造函数
 
 构造函数如下：
 
-![image-20200501233621295](/home/chen/github/_java/pic/image-20200501233621295.png) ![image-20200501002941182](/home/chen/github/_java/pic/image-20200501002941182.png)
+ ![image-20200501002941182](/home/chen/github/_java/pic/image-20200501002941182.png)
 
 初始化三个底层类，配置sources。
 
@@ -64,7 +66,22 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
 
 
-## Load - 加载BeanDefinition
+## 上下文准备逻辑
+
+```java
+// SpringApplication#prepareContexts
+load(context, sources.toArray(new Object[0]));
+```
+
+此行代码是整个加载过程的源头，以当前上下文和sources作为入参。
+
+详细的方法调用链可以看下面：
+
+[SpringBoot启动过程中的上下文准备](./SpringBoot启动过程中的上下文准备.md)
+
+
+
+## load - 加载BeanDefinition
 
 具体的加载BeanDefinition的逻辑，之前的构造函数中已经初始化好了三个用于加载的的底层类以及一些工具类。
 
@@ -76,11 +93,9 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
 看这一溜的load重载，你怕不怕？
 
-上面的方法中可知，加载的总入口为load的无参方法。
+以SpringBoot Servlet Web环境Debug发现，加载的总入口为load的无参方法。
 
-load(Class),load(Resource),load(Package),load(CharSequence)
-
-以上四个方法都是根据源类型不同，而采用的不同的加载模式。
+load(Class),load(Resource),load(Package),load(CharSequence) 以上四个方法都是根据源类型不同，而采用的不同的加载模式。
 
 ```java
 // BeanDefinitionLoader
@@ -123,7 +138,8 @@ private int load(Class<?> source) {
                 load(loader);
         }
         if (isComponent(source)) {
-            	// 直接调用的annotatedReader
+            	// 直接调用的annotatedReader,加载source的对象，并注册
+            	// annotatedReader在构造函数中看到已经持有外层BeanDefinitionRegistry的引用对象了
                 this.annotatedReader.register(source);
                 return 1;
         }
@@ -194,7 +210,7 @@ private <T> void doRegisterBean(Class<T> beanClass, @Nullable String name,
 	
     	// BeanDefinition会进一步包装成BeanDefinitionHolder
         BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
-    	// 域代理模式
+    	// 域代理模式解析
         definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
     	// 注册BeanDefinition
         BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
@@ -203,8 +219,9 @@ private <T> void doRegisterBean(Class<T> beanClass, @Nullable String name,
 
 该方法主要的作用就是往BeanDefinitionRegistry中注册BeanDefinition。
 
-1. BeanDefinition会被进一步包装为BeanDefinitionHolder，然后进行注册。
-2. 过程中的各种注解属性都会被包装到BeanDefinition中
+其中会对BeanClass做一系列的解析，包括生命周期和常见的注解。
+
+如果BeanDefinition的生命周期不为NO，还会以外层RootBeanDefinition的形式多注册一次。
 
 
 
@@ -243,11 +260,9 @@ public ScopeMetadata resolveScopeMetadata(BeanDefinition definition)
 
  ![image-20200502124545370](/home/chen/github/_java/pic/image-20200502124545370.png)
 
-该方法负责解析Bean的生命周期，默认为单例模式，不使用代理。
+该方法负责解析Bean的生命周期，**默认为单例模式，不使用代理。**
 
 **且主要解析@Scope注解。**
-
-
 
 
 
@@ -287,7 +302,7 @@ static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, Anno
 }
 ```
 
-**该方法就是从Bean的Class对象中提取各种注解属性，然后填充进AnnotatedBeanDefinition**
+**该方法就是从Bean的Class对象中提取各种注解属性，然后填充进AnnotatedBeanDefinition的成员变量**
 
 提取的注解主要有：
 
@@ -377,6 +392,7 @@ public static BeanDefinitionHolder createScopedProxy(BeanDefinitionHolder defini
         targetDefinition.setPrimary(false);
 
         // Register the target bean as separate bean in the factory.
+    	// 将原来的BeanDefinition以现在的名称注册到BeanDefinitionRegistry
         registry.registerBeanDefinition(targetBeanName, targetDefinition);
 
         // Return the scoped proxy definition as primary bean definition
@@ -385,11 +401,11 @@ public static BeanDefinitionHolder createScopedProxy(BeanDefinitionHolder defini
 }
 ```
 
-该方法会将原有的BeanDefinition替换名字后重新包装成RootBeanDefinition，并再次封装到BeanDefinitionHolder中。
+此方法主要处理ScopedProxyMode不为NO的情况，方法中将原始的BeanDefinition包装成RootBeanDefinition。
 
-此处可见BeanDefinitionHolder才是Bean最外层的持有类。
+并以前缀+原BeanDefinitionName的targetBeanName在Registry中注册原始的BeanDefinition。
 
-至于为什么要将BeanDefinition转化为RootBeanDefinition未知。
+返回的时候会以代理的BeanDefinition和原始的BeanName和代理的BeanDefinition返回Holder。
 
 
 
@@ -406,6 +422,7 @@ public static void registerBeanDefinition(
         registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());
 
         // Register aliases for bean name, if any.
+    	// BeanDefinition别名注册的逻辑暂时忽略
         String[] aliases = definitionHolder.getAliases();
         if (aliases != null) {
                 for (String alias : aliases) {
@@ -415,7 +432,32 @@ public static void registerBeanDefinition(
 }
 ```
 
-该方法简单，就是将BeanDefinition注册到BeanDefinitionRegistry中，连同别名一起。
+**粗一看该方法很简单，就是将BeanDefinition注册到BeanDefinitionRegistry中，连同别名一起。**
+
+但是联系上文发现，这次的beanName是原始的，BeanDefinition是新创建的RootBeanDefinition。
+
+所以在Registry中，该BeanDefinition以不同的名称不同的形式注册了两次。
+
+debug之后Registry中的内容也确实如我所想：
+
+ ![image-20200504112754543](/home/chen/github/_java/pic/image-20200504112754543.png)
+
+mvcApplication以不同的形式注册了两次
+
+
+
+
+
+
+### 简单总结
+
+该类主要负责将传入的Sources注册到BeanDefinitionRegistry中。
+
+再次之前会对BeanDefinition进行必要的分析，提取包括作用域在内的众多属性，并在必要的时候创建RootBeanDefinition代替原来的。
+
+新旧BeanDefinition交换名称注册到Registry原因未知。
+
+
 
 
 

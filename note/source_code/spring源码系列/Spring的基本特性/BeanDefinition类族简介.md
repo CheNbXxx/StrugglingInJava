@@ -1,10 +1,14 @@
-# BeanDefinition类族
+# BeanDefinition类族简介
+
+> BeanDefinition即为Bean定义，是IOC容器的基本族类，每一个Bean对象都会有一份BeanDefinition，保存其基本信息。
 
 - 如下是BeanDefinition主要的类图：
 
 ![image-20200502160137115](/home/chen/github/_java/pic/image-20200502160137115.png)
 
 Spring真的是面向对象的典范啊，接口分得很细（乱，多，杂）。
+
+简单介绍，整体掌握整个类族，对于单个类不会有过多描述。
 
 
 

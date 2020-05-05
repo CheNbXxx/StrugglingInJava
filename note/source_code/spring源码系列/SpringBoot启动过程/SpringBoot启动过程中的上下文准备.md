@@ -129,7 +129,7 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 
 以下为具体的监听者
 
- ![image-20200414232431965](../../../pic/image-20200414232431965.png)
+ ![image-20200414232431965](../../../../pic/image-20200414232431965.png)
 
 功能先忽略.
 
@@ -253,7 +253,7 @@ protected void load(ApplicationContext context, Object[] sources) {
 
 具体加载过程可见：
 
-[BeanDefinitionLoader](../BeanDefinitionLoader.md)
+[BeanDefinitionLoader](../../BeanDefinitionLoader.md)
 
 
 
@@ -285,4 +285,4 @@ public void contextLoaded(ConfigurableApplicationContext context) {
 
 触发的对应监听器有以下五个：
 
- ![image-20200415101613282](../../../pic/image-20200415101613282.png)
+ ![image-20200415101613282](../../../../pic/image-20200415101613282.png)

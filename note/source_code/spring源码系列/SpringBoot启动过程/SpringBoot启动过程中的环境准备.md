@@ -40,29 +40,29 @@ Servlet Web的环境下,方法对应的环境容器类是`StandardServletEnviron
 
 以下是`StandardServletEnvironment`的类图：
 
- ![image-20200329155324385](../../../pic/image-20200329155324385.png)
+ ![image-20200329155324385](../../../../pic/image-20200329155324385.png)
 
 StandardServletEnvironment继承关系中最上层的接口就是`PropertyResolver`,它提供了key/value（Property）类型的属性访问方法。
 
 以下是`PropertyResolver`的方法签名：
 
- ![image-20200414221834267](../../../pic/image-20200414221834267.png)
+ ![image-20200414221834267](../../../../pic/image-20200414221834267.png)
 
 `Environment`接口扩展了对profiles的属性访问,保存了active的profiles。
 
 profiles具体的定义待补充。
 
- ![image-20200414221802882](../../../pic/image-20200414221802882.png)
+ ![image-20200414221802882](../../../../pic/image-20200414221802882.png)
 
 `ConfigurablePropertyResolver`则另外扩展了类型转换的需求.
 
- ![image-20200414221902918](../../../pic/image-20200414221902918.png)
+ ![image-20200414221902918](../../../../pic/image-20200414221902918.png)
 
 接下来的一些接口就是对以上的整合和扩展,具体不细说了.
 
 以下是最终获取的`StandardServletEnvironment`的基本结构:
 
- ![image-20200329160858010](../../../pic/image-20200329160858010.png)
+ ![image-20200329160858010](../../../../pic/image-20200329160858010.png)
 
 propertySources是具体的属性类,每个类都标志的不同的读取位置。
 
@@ -248,7 +248,7 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
 
- ![image-20200329162414503](../../../pic/image-20200329162414503.png)
+ ![image-20200329162414503](../../../../pic/image-20200329162414503.png)
 
 加载yml和properties的详细过程可以看[ConfigFileApplicationListener](./ConfigFileApplicationListener.md).
 

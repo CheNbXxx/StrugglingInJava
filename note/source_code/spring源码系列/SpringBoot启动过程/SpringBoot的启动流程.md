@@ -53,7 +53,7 @@ public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySourc
 
 ApplicationContextInitializer的实现子类:
 
- ![image-20200329145817718](../../../pic/image-20200329145817718.png)
+ ![image-20200329145817718](../../../../pic/image-20200329145817718.png)
 
 ServerPortInfoApplicationContextInitializer 会直接添加一个WebServerInitializedEvent的监听
 
@@ -61,7 +61,7 @@ ServerPortInfoApplicationContextInitializer 会直接添加一个WebServerInitia
 
 ### 监听器
 
- ![image-20200329145919656](../../../pic/image-20200329145919656.png)
+ ![image-20200329145919656](../../../../pic/image-20200329145919656.png)
 
 其中最为关键的应该就是ConfigFileApplicationListener,会响应ApplicationEnvironmentPreparedEvent和ApplicationPreparedEvent事件,加载各类配置文件.
 
@@ -225,7 +225,7 @@ public EventPublishingRunListener(SpringApplication application, String[] args) 
 
 该事件涉及的监听器有以下四个:
 
- ![image-20200329152842427](../../../pic/image-20200329152842427.png)
+ ![image-20200329152842427](../../../../pic/image-20200329152842427.png)
 
 具体作用先忽略.
 

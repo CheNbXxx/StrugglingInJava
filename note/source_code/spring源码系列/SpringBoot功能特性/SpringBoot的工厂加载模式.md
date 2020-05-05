@@ -1,8 +1,6 @@
 # SpringBoot的工厂加载机制
 
-
-
-- 工厂加载机制是`SpringBoot`的扩展点之一，首先`META-INF/spring.factories` 路径下配置相关子类，而且在框架运行中借由`SpringFactoriesLoader`加载到框架的上下文，实现自定义扩展。
+> 工厂加载机制是`SpringBoot`的扩展点之一，首先`META-INF/spring.factories` 路径下配置相关子类，而且在框架运行中借由`SpringFactoriesLoader`加载到框架的上下文，实现自定义扩展。
 
 <!-- more -->
 
