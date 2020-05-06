@@ -11,7 +11,7 @@
 
 
 
-## 外层调用链子
+## 外层调用链
 
 ```java
 @SpringBootApplication
@@ -158,9 +158,27 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 ### 1.启动计时器
 
 ```java
+// SpringApplication
 StopWatch stopWatch = new StopWatch();
 stopWatch.start();
+
+// StopWatch
+public void start() throws IllegalStateException {
+    	start("");
+}
+
+public void start(String taskName) throws IllegalStateException {
+        if (this.currentTaskName != null) {
+            	throw new IllegalStateException("Can't start StopWatch: it's already running");
+        }
+        this.currentTaskName = taskName;
+        this.startTimeNanos = System.nanoTime();
+}
 ```
+
+上钟，计时开始。
+
+会记录当前的技师名字currentTaskName，和开始时间startTimeNanos。
 
 
 
@@ -300,7 +318,20 @@ public AnnotationConfigServletWebServerApplicationContext() {
 
 
 
-## 8. 准备上下文
+### 8. 获取异常的报告方法
+
+```java
+exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
+                                                 new Class[] { ConfigurableApplicationContext.class }, context);
+```
+
+getSpringFactoriesInstances应该熟得不能再熟了，就是通过工厂加载机制获取实现类的方法。
+
+获取的exceptionReporters会在catch的逻辑里使用，来报告出现的异常情况。
+
+
+
+### 9. 准备上下文
 
 ```java
 prepareContext(context, environment, listeners, applicationArguments, printedBanner);
@@ -310,4 +341,75 @@ prepareContext(context, environment, listeners, applicationArguments, printedBan
 
 1. 执行所有的ApplicationContextInitializer类
 2. 发布ApplicationContextInitializedEvent
-3. 加载所有的BeanDefinition
+3. 加载sources中的BeanDefinition
+4. 发布ApplicationPreparedEvent
+
+中间还会穿插一些对应用上下文的配置
+
+具体可以看下面的文章：
+
+[SpringBoot启动过程中的上下文准备](./SpringBoot启动过程中的上下文准备.md)
+
+
+
+###  10.刷新应用上下文
+
+```
+refreshContext(context);
+```
+
+这个流程简直不要太重要！！！
+
+该方法的主要流程：
+
+1. 进一步配置BeanFactory，可能会伴随着BeanFactory的刷新
+2. 调用所有的BeanFactoryPostProcessor，其中会有ConfigurationClassPostProcessor的调用，加载所有的BeanDefinition
+3. 注册所有BeanPostProcessor
+4. 初始化国际化消息
+5. 初始化广播器，并注册监听器，从此之后事件由应用上下文发布
+6. 初始化所有BeanDefinition
+7. 发布ContextRefreshedEvent
+
+具体可以看下面的文章：
+
+[SpringBoot启动过程中的上下文刷新](./SpringBoot启动过程中的上下文刷新.md)
+
+
+
+### 11. 计时结束
+
+
+
+```java
+// SpringApplication
+stopWatch.stop();
+	
+// StopWatch
+public void stop() throws IllegalStateException {
+        if (this.currentTaskName == null) {
+            	throw new IllegalStateException("Can't stop StopWatch: it's not running");
+        }
+    	// 记录单词的SpringApplication启动时间
+        long lastTime = System.nanoTime() - this.startTimeNanos;
+    	// 总时间
+        this.totalTimeNanos += lastTime;
+    	// 当前任务的信息
+        this.lastTaskInfo = new TaskInfo(this.currentTaskName, lastTime);
+    	// 是否保存任务列表
+        if (this.keepTaskList) {
+            	this.taskList.add(this.lastTaskInfo);
+        }
+    	// task计数+1
+        ++this.taskCount;
+        this.currentTaskName = null;
+}
+```
+
+因为StopWatch是通过new关键字在run方法中创建的，也并没有什么明显的逃逸代码。
+
+不是很懂。
+
+
+
+
+

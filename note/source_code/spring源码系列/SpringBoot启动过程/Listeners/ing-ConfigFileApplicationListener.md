@@ -12,7 +12,7 @@
 
 ## 概述
 
-该类会响应ApplicationEnvironmentPreparedEvent以及ApplicationPreparedEvent两个时间。
+该类会响应ApplicationEnvironmentPreparedEvent以及ApplicationPreparedEvent两个事件。
 
 接下来主要是对ApplicationEnvironmentPreparedEvent事件的响应。
 
@@ -35,6 +35,8 @@ public void onApplicationEvent(ApplicationEvent event) {
 
 ## #onApplicationEnvironmentPreparedEvent 
 
+对ApplicationEnvironmentPreparedEvent的响应逻辑主要就是加载环境的一些东西。
+
 ```java
 private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
         // 工厂模式获取所有的EnvironmentPostProcessor
@@ -50,14 +52,6 @@ private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPrepare
 }
 ```
 
-Debug时发现的`EnvironmentPostProcessor`有以下几个：
-
- ![image-20200329203541928](../../../../../pic/image-20200329203541928.png)
-
-SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的系统属性.
-
-其他的就先忽略.
-
 该方法主要就是逻辑如下：
 
 1. 通过工厂加载模式获取EnvironmentPostProcessor，加上监听器本身。
@@ -69,15 +63,31 @@ SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的�
 
 
 
----
+### #loadPostProcessors
 
-以下来分析具体的EnvironmentPostProcessor的执行逻辑。
+```java
+	List<EnvironmentPostProcessor> loadPostProcessors() {
+		return SpringFactoriesLoader.loadFactories(EnvironmentPostProcessor.class, getClass().getClassLoader());
+	}
+```
+
+该方法再简单不过了，就是通过工厂加载机制获取`EnvironmentPostProcessor`类的实现。
+
+Debug时发现的`EnvironmentPostProcessor`有以下几个：
+
+ ![image-20200329203541928](../../../../../pic/image-20200329203541928.png)
+
+SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的系统属性。
+
+SpringApplicationJsonEnvironmentPostProcessor看名字也知道是配置Json的。
+
+其他的就先忽略.
 
 
 
 
 
-## #postProcessEnvironment
+### #postProcessEnvironment
 
 ConfigFileApplicationListener本身也继承了EnvironmentPostProcessor，所以此时也会被调用。
 
@@ -96,22 +106,24 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 }
 ```
 
-这里只有两张代码，你敢信吗？
+看上去代码不多，点进去就是星辰大海。
 
-主要作用如下:
+简单来说该方法的主要作用如下:
 
 1. 添加一个随机数到配置中`environment.propertySource`。
 2. 加载本地配置文件
 
+整个的配置环境加载逻辑不出意外就全在Loader内部类中了。
 
 
-### 随机数的作用
+
+#### 随机数的作用
 
 添加的随机数如下:
 
- ![image-20200329205301295](../../../pic/image-20200329205301295.png)
+ ![image-20200329205301295](../../../../../pic/image-20200329205301295.png)
 
- ![image-20200329205230168](../../..//pic/image-20200329205230168.png)
+ ![image-20200329205230168](../../../../..//pic/image-20200329205230168.png)
 
 上面就是RandomValuePropertySource的类注释.
 
@@ -119,7 +131,7 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 
 
-### Loader类的初始化
+#### Loader类的初始化
 
 ```java
 // ConfigFileApplicationListener@Loader
@@ -136,11 +148,9 @@ Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
 }
 ```
 
+Loader初始化的逻辑也不复杂，就是配置环境，占位符处理器，资源加载器，以及PropertySource的加载器。
 
-
-#### 占位符处理器
-
-以下是placeholdersResolver的构造函数
+占位符处理器会经过一个初始化流程，以下是PropertySourcesPlaceholdersResolver的构造函数
 
 ```java
 // SystemPropertyUtils
@@ -163,21 +173,21 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 }
 ```
 
-可以看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"。
+**可以看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"，这是我们使用PropertySource的常规表达**
 
-另外工厂模式获取到的两个PropertySourceLoader如下：
+另外PropertySource的配置就是通过工厂模式获取到的两个PropertySourceLoader，具体如下：
 
- ![image-20200329205729718](../../../pic/image-20200329205729718.png)
+ ![image-20200329205729718](../../../../../pic/image-20200329205729718.png)
 
-
+分别对应了Properties和Yaml两种格式的PropertySource加载逻辑。
 
 此时Loader初始化完毕，其中制定了资源加载器，占位符，以及两个不同类型的资源加载器，分别负责不同类型的文件配置加载。
 
-
-
 再然后就是整个配置文件加载过程了，方法调用链有点长而且好多load重载方法.
 
-### load方法
+
+
+#### #load
 
 ```java
 // ConfigFileApplicationListener
@@ -240,7 +250,7 @@ static void apply(ConfigurableEnvironment environment, String propertySourceName
 
 
 
-### ConfigFileApplicationListener#initializeProfiles
+#### ConfigFileApplicationListener#initializeProfiles
 
 ```java
 
@@ -281,7 +291,7 @@ private Set<Profile> getProfilesFromProperty(String profilesProperty) {
 
 
 
-### ConfigFileApplicationListener#load
+#### ConfigFileApplicationListener#load
 
 ```java
 // ConfigFileApplicationListener#load
@@ -376,7 +386,7 @@ private void load(String location, String name, Profile profile, DocumentFilterF
 
 ## 小结
 
-ConfigFileApplicationListener会被Applica生徒に授業を乗っ取られた巨乳女教師 君島みおtionEnvironmentPreparedEvent触发,开始加载配置文件.
+ConfigFileApplicationListener会被ApplicationEnvironmentPreparedEvent触发,开始加载配置文件.
 
 配置文件默认在`classpath:/,classpath:/config/,file:./,file:./config/`四个地址中,且默认文件名为`application`
 

@@ -1,6 +1,6 @@
-## ConfigurationClassPostProcessor
+# ConfigurationClassPostProcessor
 
-> 本来是同意讲流程的，但是如果整个流程一起讲好像太多了，而且除了Configuration的加载，该类还作为BeanFactoryPostProcessor的实现。
+> 本来是统一讲流程的，但是如果整个流程一起讲好像太多了，而且除了Configuration的加载，该类还作为BeanFactoryPostProcessor的实现，所以独立成一个文件。
 
 <!-- more -->
 
@@ -8,7 +8,9 @@
 
 [TOC]
 
-### 概述
+
+
+## 概述
 
 以下即为ConfigurationClassPostProcessor的类签名：
 
@@ -45,15 +47,17 @@ BeanFactoryPostProcessor执行流程相关内容可以看下面：
 
 
 
-### 主要方法
+## 主要方法
 
-还是以两个钩子方法为主，慢慢来看。
+该类的主要方法还是两个钩子方法，以此作为基础再来看延伸的特性。
 
 
 
-#### #postProcessBeanDefinitionRegistry
+### #postProcessBeanDefinitionRegistry
 
 该方法作为BeanDefinitionRegistryPostProcessor的直接实现，在postProcessBeanFactory之前被调用。
+
+**该方法的作用就是加载所有BeanDefinition，以Registry中已存在的JavaConfig类为源.**
 
 以下就是postProcessBeanDefinitionRegistry的源码：
 
@@ -78,9 +82,11 @@ public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
 
 方法体内其实并没有太复杂的逻辑，主要就是判断一下入参的Registry是否处理过。
 
-`registriesPostProcessed`和`factoriesPostProcessed`两个成员变量分别对应着两个方法。
+registriesPostProcessed和factoriesPostProcessed两个成员变量分别对应着两个钩子方法。
 
-执行过该方法的Registry的HashCode会被放到上述两个变量里面，以此判断是否已经执行。
+执行过该方法的Registry的HashCode会被放到上述registriesPostProcessed变量里面，以此判断是否已经执行。
+
+
 
 
 
@@ -216,7 +222,7 @@ public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 1. 从BeanDefinitionRegistry中获取所有的BeanDefinition
 2. 筛选合法的ConfigurationClass并按照Order排序
 3. 创建ConfigurationClassParser
-4. 对经过筛选的BeanDefinition进行解析，验证
+4. 对经过筛选的BeanDefinition进行解析，验证两个
 5. ConfigurationClassBeanDefinitionReader加载所有Configuration类中的BeanDefinition
 6. 继续从Registry中获取新的BeanDefinition，然后的回到第四步循环，直到没有新增（这里就没有排序了）。
 7. 注册特殊的Bean对象，清除缓存。
@@ -225,5 +231,7 @@ public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 
 **就是筛选候选的Configuration类，创建对应的Parser类，循环解析直到Registry中没有产生新的BeanDefinition。** 
 
+ConfigurationClassParser的执行逻辑可以看:
 
+[ConfigurationClassParser](./utils/ConfigurationClassParser.md)
 

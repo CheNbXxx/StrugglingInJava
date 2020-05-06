@@ -1,10 +1,8 @@
 # BeanDefinitionLoader
 
-- BeanDefinitionLoader主要负责对BeanDefinition的加载工作。
-- 在SpringBoot的启动流程中，它在上下文准备阶段被调用，在上下文准备完成事件和上下文加载完成时间之间。
-- 独立成一个文件记录之后可以像集合容器的源码一样慢慢分析这个类。
-
-
+> BeanDefinitionLoader仅仅是加载其成员变量中`sources`的BeanDefinition。
+>
+> 无附加配置的情况下，仅加载主类。
 
 <!-- more -->
 
@@ -14,23 +12,25 @@
 
 ## 概述
 
-BeanDefinitionLoader的主要功能就是加载BeanDefinition的。
+BeanDefinitionLoader的主要功能就是加载BeanDefinition的
 
 下面是类的注解：
 
  ![image-20200501002314836](/home/chen/github/_java/pic/image-20200501002314836.png)
 
-BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和JavaConfig类。
+从sources中加载BeanDefinition，包括XML和JavaConfig类。
 
-是AnnotatedBeanDefinitionReader，XmlBeanDefinitionReader，ClassPathBeanDefinitionScanner三个类的门面。
+BeanDefinitionLoader是AnnotatedBeanDefinitionReader，XmlBeanDefinitionReader，ClassPathBeanDefinitionScanner三个类的门面。
 
-或者说是整合的工具类，具体的功能还是要靠上面三个类实现。
+**之前我以为此处会顺着配置源加载所有的BeanDefinition，但Debug发现，此处仅仅会将传入的配置源`sources`注册到BeanDefinitionRegistry中。**
 
-**之前我以为此处会顺着配置源加载所有的BeanDefinition，但Debug发现，此处仅仅会将传入的配置源注册到BeanDefinitionRegistry中。**
+具体的加载所有BeanDefinition的地方是ConfigurationClassPostProcessor类，详细可以看：
 
-我以为SpringBoot Servlet Web为例子，Debug发现仅会将运行的主类的BeanDefinition注册。
+[ConfigurationClassPostProcessor](../BeanFactoryPostProcessor/ConfigurationClassPostProcessor.md)
 
-具体的加载所有BeanDefinition的地方是ConfigurationClassPostProcessor类，详细可以看下文。
+我以SpringBoot Servlet Web为例子，无任何多余配置情况下，发现仅会将运行的主类的BeanDefinition注册。
+
+在SpringBoot的启动流程中，它在上下文准备阶段被调用，在上下文准备完成事件和上下文加载完成事件之间。
 
 
 
@@ -46,9 +46,9 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
 猜测BeanDefinitionLoader就是通过判断不同的sources类型然后调用不同的加载类执行的。
 
-`sources`中存放的就是需要遍历的源。
+`sources`中存放的就是需要遍历加载的源。
 
-`ResourceLoader`则是源加载器。
+`ResourceLoader`则是按资源加载器。
 
 
 
@@ -60,9 +60,13 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 
  ![image-20200501002941182](/home/chen/github/_java/pic/image-20200501002941182.png)
 
-初始化三个底层类，配置sources。
+配置sources属性，并初始化三个底层工具类
 
-最后会在ClassPathBeanDefinitionScanner中记录已经加载过源。
+sources就是等等需要加载进来的BeanDefinition，类似下图：
+
+ ![image-20200506225209802](/home/chen/github/_java/pic/image-20200506225209802.png)
+
+最后还会在ClassPathBeanDefinitionScanner中记录已经加载过源。
 
 
 
@@ -73,7 +77,7 @@ BeanDefinitionLoader会从底层的源中加载BeanDefinition，包括XML和Java
 load(context, sources.toArray(new Object[0]));
 ```
 
-此行代码是整个加载过程的源头，以当前上下文和sources作为入参。
+此行代码是整个加载过程的切入点，以当前上下文和sources作为入参。
 
 详细的方法调用链可以看下面：
 
@@ -83,7 +87,7 @@ load(context, sources.toArray(new Object[0]));
 
 ## load - 加载BeanDefinition
 
-具体的加载BeanDefinition的逻辑，之前的构造函数中已经初始化好了三个用于加载的的底层类以及一些工具类。
+具体的加载BeanDefinition的逻辑，之前的构造函数中已经初始化好了三个用于加载的的底层工具类。
 
 工具都初始化好了，就可以开工了。
 

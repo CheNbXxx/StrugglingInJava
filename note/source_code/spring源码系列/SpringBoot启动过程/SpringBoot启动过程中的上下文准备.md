@@ -12,14 +12,14 @@
 
 
 
-## prepareContext -主方法
+## #prepareContext
 
 ```java
 	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
 			SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner) {
             // 填充环境到应用上下文
             context.setEnvironment(environment);
-            // 应用上下文的后续处理,具体可看下文
+            // 应用上下文的后续配置
             postProcessApplicationContext(context);
             // 应用全部的初始化器
             applyInitializers(context);
@@ -55,11 +55,16 @@
             Assert.notEmpty(sources, "Sources must not be empty");
             // 加载BeanDefinitionLoader
             load(context, sources.toArray(new Object[0]));
-            listeners.contextLoaded(context);
+			// ApplicationPreparedEvent
+        	listeners.contextLoaded(context);
 	}
 ```
 
-### postProcessApplicationContext - 应用上下文的后处理
+
+
+### #postProcessApplicationContext
+
+主要也是对上下文做一些配置。
 
 ```java
 public static final String CONFIGURATION_BEAN_NAME_GENERATOR =
@@ -100,9 +105,9 @@ protected void postProcessApplicationContext(ConfigurableApplicationContext cont
 
 
 
-### applyInitializers - 应用初始化器
+### #applyInitializers
 
-此方法内调用在构造函数中填充的全部初始化器的`initialize`方法.
+此方法内会调用在构造函数中填充的全部初始化器的`initialize`方法.
 
 ```java
 // SpringApplication
@@ -125,7 +130,7 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 
 
 
-###  listeners.contextPrepared - 发布ApplicationContextInitializedEvent
+###  listeners#contextPrepared
 
 以下为具体的监听者
 
@@ -172,7 +177,9 @@ if (this.lazyInitialization) {
 
 
 
-### 加载BeanDefinition
+### 加载指定的BeanDefinition
+
+该方法负责加载sources中的BeanDefinition。(!!!不是全部的BeanDefinition)
 
 ```java
  // Load the sources
@@ -180,6 +187,7 @@ if (this.lazyInitialization) {
 Set<Object> sources = getAllSources();
 Assert.notEmpty(sources, "Sources must not be empty");
 // 加载BeanDefinitionLoader
+// 以上下文和sources作为入参
 load(context, sources.toArray(new Object[0]));
 ```
 
@@ -189,7 +197,9 @@ load(context, sources.toArray(new Object[0]));
 
 
 
-#### getAllSources - 获取所有配置源
+#### #getAllSources
+
+该方法用来合并所有的sources并返回。
 
 ```java
 // SpringApplictaion
@@ -207,11 +217,13 @@ public Set<Object> getAllSources() {
 }
 ```
 
-所谓的AllSource就是配置的primarySources和sources。
+代码中很容易看出所谓的AllSource就是配置的primarySources和sources。
 
 
 
-#### load - 加载源信息
+#### #load
+
+该方法负责创建BeanDefinitionLoader并调用。
 
 ```java
 // SpringApplictaion
@@ -239,13 +251,13 @@ protected void load(ApplicationContext context, Object[] sources) {
 
 方法具体逻辑如下：
 
-1. 创建BeanDefinitionLoader
-2. 配置BeanDefinitionLoader
+1. 创建BeanDefinitionLoader，将Registry和sources的引用添加到BeanDefinitionLoader中。
+2. 配置BeanDefinitionLoader，配置BeanNameGenerator，ResourceLoader和环境容器Environment。
 3. 使用BeanDefinitionLoader
 
 配置的时候会配置BeanNameGenerator和resourceLoader，这些在之前的postProcessApplicationContext方法中都已经被添加到SpringApplication中。
 
-之后就是load的方法，也是加载BeanDefinition的主要方法。
+之后就是load的方法，主要就是加载sources中的BeanDefinition。
 
 看到这方法名最头疼，之前`ConfigFileApplicationListener`中加载配置文件也是load方法，加上各种重载，lambda，头看瞎了。
 
@@ -253,11 +265,11 @@ protected void load(ApplicationContext context, Object[] sources) {
 
 具体加载过程可见：
 
-[BeanDefinitionLoader](../../BeanDefinitionLoader.md)
+[BeanDefinitionLoader](../utils/BeanDefinitionLoader.md)
 
 
 
-## 发布ApplicationPreparedEvent
+### listeners#contextLoaded
 
 ApplicationPreparedEvent的发布流程和其他的不同，这里单独记一下。
 
@@ -281,8 +293,6 @@ public void contextLoaded(ConfigurableApplicationContext context) {
 
 **到ApplicationPreparedEvent之后，监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
 
-
-
-触发的对应监听器有以下五个：
+该事件触发的对应监听器有以下五个：
 
  ![image-20200415101613282](../../../../pic/image-20200415101613282.png)
