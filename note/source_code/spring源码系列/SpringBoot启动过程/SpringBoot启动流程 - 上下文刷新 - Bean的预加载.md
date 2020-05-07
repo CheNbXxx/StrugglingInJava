@@ -52,6 +52,7 @@ Debug直接进入了DefaultListableBeanFactory类的preInstantiateSingletons方�
                                 Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
                                 if (bean instanceof FactoryBean) {
                                         final FactoryBean<?> factory = (FactoryBean<?>) bean;
+                                    	// 判断是否需要立马加载
                                         boolean isEagerInit;
                                         if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
                                                 isEagerInit = AccessController.doPrivileged((PrivilegedAction<Boolean>)
