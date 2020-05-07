@@ -16,7 +16,7 @@ ConfigurationClassParser的主要功能就是解析Configuration类。
 
 在ConfigurationClassPostProcessor#processConfigBeanDefinitions中被创建并使用。
 
- ![image-20200506072509627](../../../../../pic/image-20200506072509627.png)
+ ![image-20200506072509627](../../../../pic/image-20200506072509627.png)
 
 ConfigurationClassPostProcessor相关可以看:
 

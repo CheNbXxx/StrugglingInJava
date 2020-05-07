@@ -566,7 +566,7 @@ public void freezeConfiguration() {
 
 预先加载单例Bean应该是需要单独一个文件了.
 
-留坑.
+[SpringBoot启动过程中单例Bean的预加载](./SpringBoot启动过程中单例Bean的预加载.md)
 
 
 

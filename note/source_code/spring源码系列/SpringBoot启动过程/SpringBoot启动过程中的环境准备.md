@@ -1,22 +1,21 @@
-#  SpringBoot启动流程中的环境准备过程
+#  SpringBoot启动流程中的环境准备
 
+> 该方法在启动过程中负责创建并配置具体的环境容器。
 
+下面就是在run方法中的调用，可以看到入参有：
 
-- run方法中的环境准备只有一行代码，但是点开之后有点多的，巨多。
+- applicationArguments - 包含了main方法中参数以及命令行参数.
+- listeners -  一般情况下是EventPublishingRunListener，在上下文未初始化完毕之前，充当广播器。
 
 ```java
 ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
 ```
 
-入参包括以下:
+单行代码也可以看出，该方法的主要作用就是**准备环境容器对象**，因为返回值就是ConfigurableEnvironment。
 
-- applicationArguments - 包含了main方法中参数以及命令行参数.
 
-- listeners -  一般情况下是EventPublishingRunListener，在上下文未初始化完毕之前，充当广播器。
 
-单行代码也可以看出，该方法的主要作用就是**准备环境容器对象**。
-
-容器对象里面主要注意的就是Property和Profile两种配置。
+环境容器里面主要注意的就是Property和Profile两种配置。
 
 **Property就是传统的k/v配置，Java是主语言的应该都不陌生。**
 
@@ -30,35 +29,47 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 
 
-## SpringBoot的环境容器
+## 环境容器概述
 
-方法的主要目的就是加载各种环境配置,并返回一个`ConfigurableEnvironment`.
+上文说过方法的主要目的就是加载各种环境配置,并返回一个`ConfigurableEnvironment`.
 
 因此首先简单了解一下`ConfigurableEnvironment`指的是什么.
 
-Servlet Web的环境下,方法对应的环境容器类是`StandardServletEnvironment`.
+SpringBoot Servlet Web环境下,方法对应的环境容器类是`StandardServletEnvironment`.
 
 以下是`StandardServletEnvironment`的类图：
 
  ![image-20200329155324385](../../../../pic/image-20200329155324385.png)
 
-StandardServletEnvironment继承关系中最上层的接口就是`PropertyResolver`,它提供了key/value（Property）类型的属性访问方法。
+StandardServletEnvironment继承关系中最上层的接口是`PropertyResolver`,它提供了key/value（Property）类型的属性访问方法。
 
-以下是`PropertyResolver`的方法签名：
+以下是`PropertyResolver`的方法列表：
 
  ![image-20200414221834267](../../../../pic/image-20200414221834267.png)
 
-`Environment`接口扩展了对profiles的属性访问,保存了active的profiles。
+`Environment`接口在其基础上扩展了对profiles的属性访问,保存了active的profiles。
 
-profiles具体的定义待补充。
+profiles是Spring为了配置环境的动态切换而添加的参数。
+
+最常见的使用就是生产环境和测试环境使用不同的配置文件，例如:`application-prod.yml`,`application-test.yml`
+
+启动时就可以使用`spring.profiles.active`指定使用的配置文件。
+
+以下为Environment的方法列表：
 
  ![image-20200414221802882](../../../../pic/image-20200414221802882.png)
 
-`ConfigurablePropertyResolver`则另外扩展了类型转换的需求.
+`ConfigurablePropertyResolver`则另外扩展了类型转换的需求，以及自定义的占位符。
+
+以下为其方法列表：
 
  ![image-20200414221902918](../../../../pic/image-20200414221902918.png)
 
-接下来的一些接口就是对以上的整合和扩展,具体不细说了.
+可以看到有对ConversionService的Getter/Setter方法。
+
+接下来的一些接口就是对以上的整合和扩展,具体不细说了。
+
+
 
 以下是最终获取的`StandardServletEnvironment`的基本结构:
 
@@ -70,9 +81,11 @@ PropertyResolver则是属性解析器,里面定义了前后缀等内容。
 
 activeProfiles是激活的配置文件。
 
+主要的还是PropertySource和Profiles两类配置。
 
 
-## 外层方法
+
+## #prepareEnvironment
 
 ```java
 // SpringApplication	
@@ -101,12 +114,11 @@ private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners
 
 
 
+### #getOrCreateEnvironment
 
+根据不同的应用类型创建不同的环境类型。
 
-## getOrCreateEnvironment - 创建环境类
-
-- 根据不同的应用类型创建不同的环境类型。
-- Servlet Web环境使用`StandardservletEnvironment`类作为环境容器。
+SpringBoot Servlet Web环境使用`StandardservletEnvironment`类作为环境容器。
 
 ```java
 private ConfigurableEnvironment getOrCreateEnvironment() {
@@ -128,9 +140,11 @@ private ConfigurableEnvironment getOrCreateEnvironment() {
 
 该方法就是负责先创建出具体的容器类。
 
+具体的构造函数就不展开了。
 
 
-## configureEnvironment - 配置Property和Profiles
+
+### #configureEnvironment
 
 ```java
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
@@ -146,11 +160,11 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 
 **该方法主要配置Property的属性源，以及Profiles属性。**
 
-另外有时还会配置一个ConversionService对象,具体未知，留坑。
+另外有时还会配置一个ConversionService对象，ConversionService就是使用做属性转化的。
 
 
 
-#### Profiles配置
+#### #configureProfiles
 
 ```java
 protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
@@ -164,7 +178,9 @@ protected void configureProfiles(ConfigurableEnvironment environment, String[] a
 
 
 
-#### PropertySource配置
+#### #configurePropertySources
+
+配置PropertySources中的PropertySources可以理解为就是AbstractEnvironment#propertySources。
 
 ```java
 // CommandLinePropertySource
@@ -172,7 +188,6 @@ public static final String COMMAND_LINE_PROPERTY_SOURCE_NAME = "commandLineArgs"
 
 // SpringApplication
 protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
-        // propertySource就是环境中配置源
     	// 获取PropertySource
         MutablePropertySources sources = environment.getPropertySources();
         // 配置默认的属性，默认的属性可以通过别的方式塞进去，默认好像是没有默认属性
@@ -198,18 +213,16 @@ protected void configurePropertySources(ConfigurableEnvironment environment, Str
 }
 ```
 
-该方法主要由以下两步：
+该方法逻辑并不复杂：
 
-1. 配置默认的配置源
-2. 配置命令行参数
+1. 如果默认的配置属性存在，则添加到propertySources的最后
+2. 配置命令行参数，不在新增，在就合并。
 
-PropertySource是放在末尾的，命令行参数是放在开头的，也不知道有啥区别。
-
-
+**PropertySource是放在末尾的，命令行参数是放在开头的，也不知道有啥区别。**
 
 
 
-## ConfigurationPropertySources.attach - 附加属性配置
+### ConfigurationPropertySources#attach
 
 ```java
 private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";
@@ -234,15 +247,17 @@ public static void attach(Environment environment) {
 }
 ```
 
-该方法主要是想要在PropertySources中保留一份自己的副本。
+**该方法主要是想要在PropertySources中保留一份自己的副本。**
+
+具体的副本有啥用未知。
 
 就算之前有但是如果和当前Source不同也会先删除，保证副本和当前环境的一致性。
 
 
 
+### listeners#environmentPrepared
 
-
-## 触发ApplicationEnvironmentPreparedEvent
+发布ApplicationEnvironmentPreparedEvent。
 
 ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。
 
@@ -250,11 +265,13 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
  ![image-20200329162414503](../../../../pic/image-20200329162414503.png)
 
-加载yml和properties的详细过程可以看[ConfigFileApplicationListener](./ConfigFileApplicationListener.md).
+加载yml和properties的详细过程可以看：
+
+[ConfigFileApplicationListener](./ConfigFileApplicationListener.md).
 
 
 
-## bindToSpringApplication - 绑定环境
+### #bindToSpringApplication
 
 将准备好的容器环境绑定到当前的上下文。
 
@@ -270,9 +287,13 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 	}
 ```
 
+具体绑定流程待展开。
 
 
-## 第二次Attach
+
+### ConfigurationPropertySources#attach
+
+这是第二次调用该方法。
 
 猜测是因为在绑定环境或者中间其他步骤中会直接替换整个的PropertySource的引用，所以此时要重新填充自举的属性。
 

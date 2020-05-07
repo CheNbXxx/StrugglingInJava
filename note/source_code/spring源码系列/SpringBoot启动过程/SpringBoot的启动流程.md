@@ -22,7 +22,7 @@ public class MvcApplication {
 }
 ```
 
-以上是最基础的Spring应用启动代码，调用SpringApplication的静态方法run启动Spring的整个容器。
+以上是最基础的Spring应用启动代码，调用SpringApplication的run静态方法启动SpringBoot的整个容器。
 
 
 
@@ -97,7 +97,7 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
 		stopWatch.start();
         // 这个就是最终要返回的上下文对象 
         ConfigurableApplicationContext context = null;
-        // 异常报告
+        // 异常报告集合
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
         // Headless相关配置
 		configureHeadlessProperty();
@@ -124,6 +124,8 @@ mainApplicationClass的推断过程很有意思，直接构造一个RuntimeExcep
                 exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
                         new Class[] { ConfigurableApplicationContext.class }, context);
                 // 准备上下文 
+            	//  该阶段会调用构造函数中获取的ApplicationContextInitializer
+            	// 也会将sources中的BeanDefinition加载进BeanFactory
                 prepareContext(context, environment, listeners, applicationArguments, printedBanner);
                 // 刷新上下文
                 refreshContext(context);
