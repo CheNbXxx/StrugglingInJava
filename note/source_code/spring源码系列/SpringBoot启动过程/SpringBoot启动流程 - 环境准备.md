@@ -313,3 +313,5 @@ Property除了加载别的属性之后，一他会存放一份副本在他的集
 2. 添加默认参数，命令行参数等一些配置到实例中，并配置Profile
 3. 触发`ApplicationEnvironmentPreparedEvent`，读取配置文件到环境中
 4. 将创建好的环境对象与当前的SpringApplication对象绑定
+
+经过该流程，会返回一个统一的完整的Environment容器给SpringApplication。

@@ -17,6 +17,8 @@ beanFactory.preInstantiateSingletons();
 
 以上代码就是refresh中的部分，直接委托给BeanFactory实例化单例Bean对象。
 
+接下来就看DefaultListableBeanFactory的了。
+
 
 
 
@@ -28,20 +30,18 @@ Debug直接进入了DefaultListableBeanFactory类的preInstantiateSingletons方�
 ```java
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
-        	// 常规的阶段日志
+        	// 常规的日志
             if (logger.isDebugEnabled()) {
                 	logger.debug("Pre-instantiating singletons in " + this);
             }
 
 			// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 			// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
-        	// 所有的beanDefinittionNames装成一个List
 			List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
             // Trigger initialization of all non-lazy singleton beans...
-            // 遍历所有的BeanDefinitionName
             for (String beanName : beanNames) {
-                    // 获取RootBeanDefinition
+                    // 获取RootBeanDefinition，如果有父类的BeanDefinition则需要返回合并之后的
                     RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
                 	// 判断是否符合要求
                		// 要求有三：1.不为抽象类 2.单例 3.非懒加载
