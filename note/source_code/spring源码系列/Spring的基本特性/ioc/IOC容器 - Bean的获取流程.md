@@ -182,7 +182,9 @@ protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredTy
 
 
 
-### #transformedBeanName
+### #transformedBeanName - 转换Bean名称
+
+**该方法主要为了去除FactoryBean的&的前缀，并获取最原始的Bean名称。**
 
 ```java
 	protected String transformedBeanName(String name) {
@@ -192,7 +194,7 @@ protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredTy
 
 
 
-#### BeanFactoryUtils#transformedBeanName
+#### #transformedBeanName - 去&前缀
 
 ```java
 // BeanFactory接口中的常量
@@ -200,9 +202,11 @@ String FACTORY_BEAN_PREFIX = "&";
 
 public static String transformedBeanName(String name) {
         Assert.notNull(name, "'name' must not be null");
+    	// 没有前缀则直接返回
         if (!name.startsWith(BeanFactory.FACTORY_BEAN_PREFIX)) {
             	return name;
         }
+        // 递归去除Bean中的前缀
         return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
                 do {
                     beanName = beanName.substring(BeanFactory.FACTORY_BEAN_PREFIX.length());
@@ -218,7 +222,7 @@ public static String transformedBeanName(String name) {
 
 
 
-#### SimpleAliasRegistry#canonicalName
+#### #canonicalName - 去别名
 
 ```java
 // SimpleAliasRegistry
@@ -246,7 +250,7 @@ SimpleAliasRegistry中存储别名的方式就是通过新旧Bean名称的映射
 
 
 
-### #getSingleton
+### #getSingleton - 从缓存中获取Bean
 
 ```java
 // DefaultSingletonBeanRegistry
@@ -292,7 +296,7 @@ protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 
 
 
-#### #isSingletonCurrentlyInCreation
+#### #isSingletonCurrentlyInCreation - 对象是否正在创建
 
 ```java
 public boolean isSingletonCurrentlyInCreation(String beanName) {
@@ -307,7 +311,9 @@ public boolean isSingletonCurrentlyInCreation(String beanName) {
 
 
 
-### #getObjectForBeanInstance
+### #getObjectForBeanInstance - 从入参的beanInstance中获取对象
+
+入参的name可能带有&前缀，但beanName则是原始Bean的名称。
 
 ```java
 protected Object getObjectForBeanInstance(
@@ -316,7 +322,6 @@ protected Object getObjectForBeanInstance(
    // Don't let calling code try to dereference the factory if the bean isn't a factory.
     // 判断name是否是FactoryBean对象
     // 这里的判断逻辑非常简单，就是name是否已&开头
-    // 整个判断中，如果beanInstance属于BeanFactory类则直接返回
    if (BeanFactoryUtils.isFactoryDereference(name)) {
        	 // NullBean代表什么意义未知
           if (beanInstance instanceof NullBean) {
@@ -326,10 +331,14 @@ protected Object getObjectForBeanInstance(
           if (!(beanInstance instanceof FactoryBean)) {
              	throw new BeanIsNotAFactoryException(beanName, beanInstance.getClass());
           }
-       	 // 配置RootBeanDefinition的属性
+       
+          // 到这后面的判断是name以&为前缀，且beanInstance为FactoryBean类型 
+       
+       	 // 配置RootBeanDefinition的FactoryBean属性
           if (mbd != null) {
              	mbd.isFactoryBean = true;
           }
+       	  // 直接返回了
           return beanInstance;
    }
 
@@ -341,19 +350,26 @@ protected Object getObjectForBeanInstance(
    if (!(beanInstance instanceof FactoryBean)) {
       		return beanInstance;
    }
+    
+    // 在这之前如果是标准的FactoryBean，或者标准的普通Bean都直接返回了。
+    // name带有&前缀，且beanInstance为FactoryBean类型
+    // beanInstance不为FactoryBean类型就直接返回了
+    // 剩下的就是没有&前缀的FactoryBean类型了。
 
    Object object = null;
    if (mbd != null) {
-           // 这里可以确定Bean是FactoryBean了
+           // 这里可以确定Bean是FactoryBean了，且名称没有带&前缀
           mbd.isFactoryBean = true;
    } else {
+       	// 从factoryBeanObjectCache缓存中获取对象
       	object = getCachedObjectForFactoryBean(beanName);
    }
+    // mbd不为null，或者mbd为null，但是没有从缓存中获取到对象
    if (object == null) {
           // Return bean instance from factory.
           FactoryBean<?> factory = (FactoryBean<?>) beanInstance;
           // Caches object obtained from FactoryBean if it is a singleton.
-          // 获取BeanDefinition
+          // 获取合并BeanDefinition
           if (mbd == null && containsBeanDefinition(beanName)) {
                 mbd = getMergedLocalBeanDefinition(beanName);
           }
@@ -366,7 +382,7 @@ protected Object getObjectForBeanInstance(
 
 
 
-#### #getCachedObjectForFactoryBean
+#### #getCachedObjectForFactoryBean - 缓存中获取FactoryBean对象
 
 ```java
 // 继承自FactoryBeanRegistrySupport的方法
@@ -382,7 +398,7 @@ protected Object getCachedObjectForFactoryBean(String beanName) {
 
 
 
-#### #getMergedLocalBeanDefinition
+#### #getMergedLocalBeanDefinition - 获取合成的BeanDefinition
 
 ```java
 protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throws BeansException {
@@ -392,13 +408,23 @@ protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throw
         if (mbd != null && !mbd.stale) {
             	return mbd;
         }
+    	// 先从beanDefinitionMap缓存中获取BeanDefinition
+    	// 再获取合并的BeanDefinition
         return getMergedBeanDefinition(beanName, getBeanDefinition(beanName));
 }
 ```
 
+该方法的作用就是获取一个合并的BeanDefinition，这里的合并是指和父BeanDefinition合并，子BeanDefinition去覆盖父BeanDefinition的一些属性。
+
+获取流程也不复杂：
+
+1. 从缓存中获取已经合并了的RootBeanDefinition，获取到了就直接返回
+2. 从beanDefinitionMap中获取BeanDefinition，这步是必须要获取到的，没有则直接报错。
+3. 将获取到的BeanDefinition与其父BeanDefinition合并，如果有的话。
 
 
-##### #getBeanDefinition
+
+##### #getBeanDefinition - 从存量中获取BeanDefinition
 
 ```java
 // DefaultListableBeanFactory
@@ -419,7 +445,16 @@ public BeanDefinition getBeanDefinition(String beanName) throws NoSuchBeanDefini
 
 
 
-##### #getMergedBeanDefinition
+##### #getMergedBeanDefinition - 获取合并的BeanDefinition
+
+```java
+protected RootBeanDefinition getMergedBeanDefinition(String beanName, BeanDefinition bd)
+      throws BeanDefinitionStoreException {
+   return getMergedBeanDefinition(beanName, bd, null);
+}
+```
+
+以上是过渡方法，完整逻辑在下面的方法中。
 
 ```java
 protected RootBeanDefinition getMergedBeanDefinition(
@@ -428,120 +463,226 @@ protected RootBeanDefinition getMergedBeanDefinition(
 		// 需要对mergedBeanDefinitions对象上锁，
     	// 可以关注一下，接下来mergedBeanDefinitions的作用
 		synchronized (this.mergedBeanDefinitions) {
-			RootBeanDefinition mbd = null;
-			RootBeanDefinition previous = null;
+                RootBeanDefinition mbd = null;
+                RootBeanDefinition previous = null;
 
-			// Check with full lock now in order to enforce the same merged instance.
-            // 从mergedBeanDefinitions中获取BeanDefinition
-			if (containingBd == null) {
-					mbd = this.mergedBeanDefinitions.get(beanName);
-			}
-			
-            // 没有获取到，或者获取到的BeanDefinition是旧的
-			if (mbd == null || mbd.stale) {
-                    previous = mbd;
-                	// 如果没有父级的BeanDefinition，就直接将复制bd
-                	// bd如果是RootBeanDefinition就采用克隆，不然则采用包装
-                    if (bd.getParentName() == null) {
-                            // Use copy of given root bean definition.
-                            if (bd instanceof RootBeanDefinition) {
-                                	mbd = ((RootBeanDefinition) bd).cloneBeanDefinition();
-                            } else {
-                                	mbd = new RootBeanDefinition(bd);
-                            }
-                    // 以下是存在父级BeanDefinition的情况
-					} else {
-                            // Child bean definition: needs to be merged with parent.
-                            // 需要将父级BeanDefinition和子级的合并
-                            BeanDefinition pbd;
-                            try {
-                                // 上面讲过的方法，去除&前缀，恢复到原始的BeanName
-                                String parentBeanName = transformedBeanName(bd.getParentName());
-                                //  父BeanDefinition的名称和自己是否相同
-                                // 相同则代表父BeanDefinition在父BeanFactory中
-                                if (!beanName.equals(parentBeanName)) {
-                                        	// 同样的获取方式，因为父级的BeanDefinition可能也有父级
-                                        	pbd = getMergedBeanDefinition(parentBeanName);
-                                }   else {	
-                                    	// 获取父级的BeanFactory
-                                        BeanFactory parent = getParentBeanFactory();
-                                    	// 从父级的BeanFactory中获取BeanName
-                                        if (parent instanceof ConfigurableBeanFactory) {
-                                            	pbd = ((ConfigurableBeanFactory) parent).getMergedBeanDefinition(parentBeanName);
-                                        } else {
-                                            throw new NoSuchBeanDefinitionException(parentBeanName,
-                                                    "Parent name '" + parentBeanName + "' is equal to bean name '" + beanName +
-                                                    "': cannot be resolved without a ConfigurableBeanFactory parent");
-                                        }
+                // Check with full lock now in order to enforce the same merged instance.
+                // 从mergedBeanDefinitions中获取BeanDefinition
+                if (containingBd == null) {
+                        mbd = this.mergedBeanDefinitions.get(beanName);
+                }
+
+                // 没有获取到，或者获取到的BeanDefinition是旧的才需要走下面的合并流程
+                if (mbd == null || mbd.stale) {
+                    	// 如果mbd不为null，但是stale
+                    	// 此处的previous就可以在最后做合并。
+                        previous = mbd;
+                        // parentName为空表示没有父级的BeanDefinition，就直接将复制bd
+                        // bd如果是RootBeanDefinition就采用克隆，不然则采用包装
+                        if (bd.getParentName() == null) {
+                                // Use copy of given root bean definition.
+                                if (bd instanceof RootBeanDefinition) {
+                                        mbd = ((RootBeanDefinition) bd).cloneBeanDefinition();
+                                } else {
+                                        mbd = new RootBeanDefinition(bd);
                                 }
-                        } catch (NoSuchBeanDefinitionException ex) {
-                            	throw new BeanDefinitionStoreException(bd.getResourceDescription(), beanName,
-                                    	"Could not resolve parent bean definition '" + bd.getParentName() + "'", ex);
+                        // 以下是存在父级BeanDefinition的情况
+                        } else {
+                                // Child bean definition: needs to be merged with parent.
+                                // 需要将父级BeanDefinition和子级的合并
+                                BeanDefinition pbd;
+                                try {
+                                    // 上面讲过的方法，去除&前缀，恢复到原始的BeanName
+                                    String parentBeanName = transformedBeanName(bd.getParentName());
+                                    //  父BeanDefinition的名称和自己是否相同
+                                    // 相同则代表父BeanDefinition在父BeanFactory中
+                                    if (!beanName.equals(parentBeanName)) {
+                                                // 同样的获取方式，因为父级的BeanDefinition可能也有父级
+                                                pbd = getMergedBeanDefinition(parentBeanName);
+                                    }   else {	
+                                            // 获取父级的BeanFactory
+                                            BeanFactory parent = getParentBeanFactory();
+                                            // 从父级的BeanFactory中获取BeanName
+                                            if (parent instanceof ConfigurableBeanFactory) {
+                                                    pbd = ((ConfigurableBeanFactory) parent).getMergedBeanDefinition(parentBeanName);
+                                            } else {
+                                                throw new NoSuchBeanDefinitionException(parentBeanName,
+                                                        "Parent name '" + parentBeanName + "' is equal to bean name '" + beanName +
+                                                        "': cannot be resolved without a ConfigurableBeanFactory parent");
+                                            }
+                                    }
+                            } catch (NoSuchBeanDefinitionException ex) {
+                                    throw new BeanDefinitionStoreException(bd.getResourceDescription(), beanName,
+                                            "Could not resolve parent bean definition '" + bd.getParentName() + "'", ex);
+                            }
+                            // Deep copy with overridden values.
+                            mbd = new RootBeanDefinition(pbd);
+                            // 用bd覆盖mbd的内容
+                            mbd.overrideFrom(bd);
                         }
-                        // Deep copy with overridden values.
-                        mbd = new RootBeanDefinition(pbd);
-                        // 用bd覆盖mbd的内容
-                        mbd.overrideFrom(bd);
+
+                    // Set default singleton scope, if not configured before.
+                    if (!StringUtils.hasLength(mbd.getScope())) {
+                        mbd.setScope(SCOPE_SINGLETON);
                     }
 
-				// Set default singleton scope, if not configured before.
-				if (!StringUtils.hasLength(mbd.getScope())) {
-					mbd.setScope(SCOPE_SINGLETON);
-				}
+                    // A bean contained in a non-singleton bean cannot be a singleton itself.
+                    // Let's correct this on the fly here, since this might be the result of
+                    // parent-child merging for the outer bean, in which case the original inner bean
+                    // definition will not have inherited the merged outer bean's singleton status.
+                    if (containingBd != null && !containingBd.isSingleton() && mbd.isSingleton()) {
+                        mbd.setScope(containingBd.getScope());
+                    }
 
-				// A bean contained in a non-singleton bean cannot be a singleton itself.
-				// Let's correct this on the fly here, since this might be the result of
-				// parent-child merging for the outer bean, in which case the original inner bean
-				// definition will not have inherited the merged outer bean's singleton status.
-				if (containingBd != null && !containingBd.isSingleton() && mbd.isSingleton()) {
-					mbd.setScope(containingBd.getScope());
-				}
-
-				// Cache the merged bean definition for the time being
-				// (it might still get re-merged later on in order to pick up metadata changes)
-                // 在containingBd为空的情况下，才会去缓存合成后的Bean对象
-				if (containingBd == null && isCacheBeanMetadata()) {
-						this.mergedBeanDefinitions.put(beanName, mbd);
-				}
-			}	
-            // 如果旧BeanDefinition不为空
-			if (previous != null) {
-					copyRelevantMergedBeanDefinitionCaches(previous, mbd);
-			}
-			return mbd;
-		}
+                    // Cache the merged bean definition for the time being
+                    // (it might still get re-merged later on in order to pick up metadata changes)
+                    // 在containingBd为空的情况下，才会去缓存合成后的Bean对象
+                    if (containingBd == null && isCacheBeanMetadata()) {
+                            this.mergedBeanDefinitions.put(beanName, mbd);
+                    }
+                }	
+                // 如果旧BeanDefinition不为空
+                if (previous != null) {
+                        copyRelevantMergedBeanDefinitionCaches(previous, mbd);
+                }
+                return mbd;
+            }
 	}
 ```
 
-该方法主要用户获取合并的BeanDefinition，合并主要是指子BeanDefinition去覆盖父BeanDefinition的部分属性，并取最终对象。
+该方法主要用户获取合并的BeanDefinition，**合并主要是指子BeanDefinition去覆盖父BeanDefinition的部分属性**，并获取最终对象。
 
-方法中只有在containingBd为空并且允许缓存的情况下才会去缓存合成的BeanDefinition。
+方法的整体逻辑如下：
 
 1. 如果入参containingBd为空，则尝试去缓存中获取目标的BeanDefinition
-2. 如果目标BeanDefinition过时或者并不在缓存中，则开始合成的逻辑：
-   1. 判断入参bd是否有父BeanDefinition，没有的话直接尝试包装或者从bd深拷贝。
-   2. 有的话会先获取BeanDefinition，根据名称是否一样判断从当前BeanFactory中获取还是从父BeanFactory中获取。
-   3. 获取之后包装一份，并且拿当前的bd去覆盖一些父类的内容。
-3. 设置合成后BeanDefinition的生命周期
-4. 如果第二部中获取的BeanDefinition过时，则将其与现在的合成后的BeanDefinition合并。
+2. 如果**目标BeanDefinition过时或者并不在缓存中**，进入第3步，否则直接跳到第7步。
+3. 判断**入参的BeanDefinition是否有父级**，没有直接跳到第7步。
+4. 有的话会先获取BeanDefinition，根据**名称是否一样判断从当前BeanFactory中获取还是从父BeanFactory中获取。**
+5. 获取到父级BeanDefinition之后拿入参子BeanDefinition去覆盖一些父类的内容(这里就算合成吧)
+6. 设置合成后BeanDefinition的生命周期，并看情况设置缓存。
+7. 如果第2步中获取的BeanDefinition是过时而非没获取到，则将其与合成后的BeanDefinition合并。
+8. 返回合成后的BeanDefinition
+
+**方法中只有在containingBd为空并且允许缓存的情况下才会去缓存合成的BeanDefinition。**
+
+另外父级的BeanDefinition可能会存在于父级的BeanFactory中。
 
 
+
+#### #getObjectFromFactoryBean - 从FactoryBean中获取对象
 
 ```java
-private void copyRelevantMergedBeanDefinitionCaches(RootBeanDefinition previous, RootBeanDefinition mbd) {
-        if (ObjectUtils.nullSafeEquals(mbd.getBeanClassName(), previous.getBeanClassName()) &&
-                ObjectUtils.nullSafeEquals(mbd.getFactoryBeanName(), previous.getFactoryBeanName()) &&
-                ObjectUtils.nullSafeEquals(mbd.getFactoryMethodName(), previous.getFactoryMethodName())) {
-                ResolvableType targetType = mbd.targetType;
-                ResolvableType previousTargetType = previous.targetType;
-                if (targetType == null || targetType.equals(previousTargetType)) {
-                        mbd.targetType = previousTargetType;
-                        mbd.isFactoryBean = previous.isFactoryBean;
-                        mbd.resolvedTargetType = previous.resolvedTargetType;
-                        mbd.factoryMethodReturnType = previous.factoryMethodReturnType;
-                        mbd.factoryMethodToIntrospect = previous.factoryMethodToIntrospect;
-                }
-        }
+// FactoryBeanRegistrySupport
+protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
+		// FactoryBean是单例模式，并且存在于singletonObjects缓存中
+    	if (factory.isSingleton() && containsSingleton(beanName)) {
+            	// 这里就是对singletonObjects上锁
+                synchronized (getSingletonMutex()) {
+                    	// 从factoryBeanObjectCache中获取对象，对象不为空就直接
+                        Object object = this.factoryBeanObjectCache.get(beanName);
+                        if (object == null) {
+                            	// 内层包括系统安全的东西有点不明白
+                            	// 先简单当做 factory.getObject()
+                                object = doGetObjectFromFactoryBean(factory, beanName);
+                                // Only post-process and store if not put there already during getObject() call above
+                                // (e.g. because of circular reference processing triggered by custom getBean calls)
+                            	// 再从缓存中获取一遍
+                                Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
+                            	// 如果已经存在
+                                if (alreadyThere != null) {
+                                    	object = alreadyThere;
+                                } else {
+                                    	// 是否需要执行BeanPostProcessor
+                                        if (shouldPostProcess) {
+                                                if (isSingletonCurrentlyInCreation(beanName)) {
+                                                    // Temporarily return non-post-processed object, not storing it yet..	
+                                                    // 临时返回，不需要进一步存储。
+                                                    return object;
+                                                }
+                                            	// 执行创建前的准备工作，判断以及将beanName加到singletonsCurrentlyInCreation缓存中
+                                                beforeSingletonCreation(beanName);
+                                                try {
+                                                    // Debug后进入的是AbstractAutowireCapableBeanFactory的方法
+                                                    // 遍历调用BeanPostProcesser的后置钩子方法
+                                                    object = postProcessObjectFromFactoryBean(object, beanName);
+                                                } catch (Throwable ex) {
+                                                    throw new BeanCreationException(beanName,
+                                                            "Post-processing of FactoryBean's singleton object failed", ex);
+                                                } finally {
+                                                    // 执行后的善后工作，将beanName移出缓存。
+                                                    afterSingletonCreation(beanName);
+                                                }
+                                    }
+                                    // 如果singletonObjects缓存中存在该Bean则把该Bean直接放缓存中
+                                    if (containsSingleton(beanName)) {
+                                        	this.factoryBeanObjectCache.put(beanName, object);
+                                    }
+                                }
+                        }
+                        return object;
+                    }
+                } else {
+            			// 获取FactoryBean中真实的Bean，并遍历执行后置钩子方法
+                        Object object = doGetObjectFromFactoryBean(factory, beanName);
+                        if (shouldPostProcess) {
+                            try {
+                                	object = postProcessObjectFromFactoryBean(object, beanName);
+                            } catch (Throwable ex) {
+                                	throw new BeanCreationException(beanName, "Post-processing of FactoryBean's object failed", ex);
+                            }
+                    }
+                    return object;
+            }
+	}
+```
+
+
+
+##### #beforeSingletonCreation - 单例创建前
+
+```java
+// DefaultSingletonBeanRegistry
+protected void beforeSingletonCreation(String beanName) {
+		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.add(beanName)) {
+			throw new BeanCurrentlyInCreationException(beanName);
+		}
 }
 ```
 
+
+
+##### #afterSingletonCreation - 单例创建后
+
+```java
+// DefaultSingletonBeanRegistry
+protected void afterSingletonCreation(String beanName) {
+    if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.remove(beanName)) {
+        throw new IllegalStateException("Singleton '" + beanName + "' isn't currently in creation");
+    }
+}
+```
+
+对比创建前后的方法调用可以发现，创建期间beanName是被保存在singletonsCurrentlyInCreation。
+
+也就是说singletonsCurrentlyInCreation保存的是创建期间的beanName。
+
+
+
+##### #postProcessObjectFromFactoryBean
+
+```java
+@Override
+protected Object postProcessObjectFromFactoryBean(Object object, String beanName) {
+    return applyBeanPostProcessorsAfterInitialization(object, beanName);
+}
+```
+
+该方法就是对BeanPostProcess#postProcessAfterInitialization的遍历调用，具体细节先忽略。
+
+
+
+## 总结
+
+1. 转换BeanName，去除&前缀(FactoryBean的标志)，若是别名迭代取得原始名称。
+2. 从缓存中获取Bean
+3. 
