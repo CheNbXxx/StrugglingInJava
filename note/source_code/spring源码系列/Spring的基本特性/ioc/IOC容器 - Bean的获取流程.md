@@ -618,6 +618,8 @@ singletonObjects是缓存创建好的Bean对象的。
 
 earlySingletonObjects是存放的早期引用。
 
+另外就是对BeanPostProcess的处理并没有包含在这个方法里面，也就是说是包含在传入的ObjectFactory里面。
+
 
 
 
