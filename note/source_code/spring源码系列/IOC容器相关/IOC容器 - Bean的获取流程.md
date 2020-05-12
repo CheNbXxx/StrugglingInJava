@@ -51,6 +51,7 @@ protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredTy
                 // Fail if we're already creating this bean instance:
                 // We're assumably within a circular reference.
                 // 原型模式直接抛出异常
+            	// 如果是原型模式就不考虑父BeanFactory了
                 if (isPrototypeCurrentlyInCreation(beanName)) {
                         throw new BeanCurrentlyInCreationException(beanName);
                 }
@@ -81,9 +82,9 @@ protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredTy
                         }
 			}
 
-           // 标记Bean对象正在创建
+           // 标记Bean对象已经创建
 			if (!typeCheckOnly) {
-				markBeanAsCreated(beanName);
+					markBeanAsCreated(beanName);
 			}
 
 			try {
@@ -323,7 +324,7 @@ public boolean isSingletonCurrentlyInCreation(String beanName) {
 
 
 
-### #markBeanAsCreated - 标记Bean对象正在创建
+### #markBeanAsCreated - 标记Bean对象已经创建
 
 ```java
 protected void markBeanAsCreated(String beanName) {
@@ -349,9 +350,11 @@ protected void clearMergedBeanDefinition(String beanName) {
 }
 ```
 
-标记Bean对象正在创建的做法就是将beanName添加到alreadyCreated中。
+标记Bean对象已经创建的做法就是将beanName添加到alreadyCreated中。
 
-此处将合成的BeanDefinition清除之后，如上文中的方法`getMergedBeanDefinition`以及`getMergedLocalBeanDefinition`中，都会重新去合成RootBeanDefinition。
+在方法的异常处理catch中会将其删除，表示创建失败。
+
+此处将合成的BeanDefinition清除之后，如上文中的方法`getMergedBeanDefinition`以及`getMergedLocalBeanDefinition`中，都会重新去合成RootBeanDefinition，因为b.stale为true了。
 
 
 
@@ -443,8 +446,8 @@ protected RootBeanDefinition getMergedBeanDefinition(
                                 } else {
                                         mbd = new RootBeanDefinition(bd);
                                 }
-                        // 以下是存在父级BeanDefinition的情况
-                        } else {
+                          // 以下是存在父级BeanDefinition的情况
+                          } else {
                                 // Child bean definition: needs to be merged with parent.
                                 // 需要将父级BeanDefinition和子级的合并
                                 BeanDefinition pbd;
@@ -538,6 +541,7 @@ public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
             // 从缓存中获取对象
 			Object singletonObject = this.singletonObjects.get(beanName);
 			if (singletonObject == null) {
+                	// 单例的创建正处在异常状态
                     if (this.singletonsCurrentlyInDestruction) {
                         throw new BeanCreationNotAllowedException(beanName,
                                 "Singleton bean creation not allowed while singletons of this factory are in destruction " +
@@ -546,7 +550,7 @@ public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
                     }
-                	// 单例Bean对象创建前的逻辑，之前有讲过
+                	// 单例Bean对象创建前的逻辑，之前有看过
                     beforeSingletonCreation(beanName);
                     boolean newSingleton = false;
                     boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -555,9 +559,9 @@ public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
                     }
                     try {
                             // 这里不是FactoryBean的getObjects
-                        	// 而是调用方传入的方法，从doGetBean进来时就是调用的createBean方法，
-                            // 创建流程可以在另外一个文件中看到
+                        	// 而是调用方传入的方法，从doGetBean进来时就是调用的createBean方法
                             singletonObject = singletonFactory.getObject();
+                        	// 表示这是新的单例Bean
                             newSingleton = true;
                     } catch (IllegalStateException ex) {
                             // Has the singleton object implicitly appeared in the meantime ->
@@ -625,6 +629,8 @@ earlySingletonObjects是存放的早期引用。
 
 
 ### #getObjectForBeanInstance - 从入参的beanInstance中获取对象
+
+该方法就是处理&前缀的对象获取，判断返回BeanFactory或Bean。
 
 ```java
 protected Object getObjectForBeanInstance(
@@ -865,12 +871,16 @@ protected Object postProcessObjectFromFactoryBean(Object object, String beanName
 
 ## doGetBean的整体流程
 
-1. 处理name，去除&前缀，去别名。
-2. 三级缓存获取Bean对象，三级缓存分别是
+简化版的流程，细致的流程可能需要到文中看。
+
+简化流程如下：
+
+1. 处理name，去除&前缀，去别名
+2. 三级缓存获取Bean对象，三级缓存如下：
    1. singletonObjects
    2. earlySingletonObjects
    3. singletonFactory
-3. 缓存中没有则判断父级的BeanFactory是否有该Bean的实例化对象，有就返回
+3. 缓存中没有或者参数不为空，则判断父级的BeanFactory是否有该Bean的实例化对象，有就返回
 4. 没有则开始创建流程，先获取合成的RootBeanDefinition
 5. 递归处理依赖问题
 6. 区分不同的生命周期实例化对象并返回
