@@ -47,12 +47,15 @@ protected Object createBean(String beanName, RootBeanDefinition mbd, @Nullable O
    ...
           // Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
            // 嗯。。给BeanPostProcesser一个机会
+       		// 看着好像是通过postProcessBeforeInstantiation方法来实例化Bean
+       		// 对象实例化之后也会执行BeanPostProcessor  After钩子方法
           Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
           if (bean != null) {
              	return bean;
           }
 	...
        	 // doXXXX的一般都是核心方法，比如doGetBean
+        // 这里应该是核心的Bean创建方法
           Object beanInstance = doCreateBean(beanName, mbdToUse, args);
     ...
      	 return beanInstance;
@@ -62,8 +65,8 @@ protected Object createBean(String beanName, RootBeanDefinition mbd, @Nullable O
 
 整体的代码逻辑很清晰
 
-1. 解析Class对象
-2. 检查方法的重写
+1. 解析出Class对象
+2. 检查重写方法
 3. 执行BeanPostProcess相关代码
 4. 正式创建
 
@@ -73,7 +76,44 @@ protected Object createBean(String beanName, RootBeanDefinition mbd, @Nullable O
 
 
 
+### #resolveBeanClass - 解析Class对象
+
+```java
+@Nullable
+protected Class<?> resolveBeanClass(final RootBeanDefinition mbd, String beanName, final Class<?>... typesToMatch)
+      throws CannotLoadBeanClassException {
+   try {
+      if (mbd.hasBeanClass()) {
+         return mbd.getBeanClass();
+      }
+      if (System.getSecurityManager() != null) {
+         return AccessController.doPrivileged((PrivilegedExceptionAction<Class<?>>) () ->
+            doResolveBeanClass(mbd, typesToMatch), getAccessControlContext());
+      }
+      else {
+         return doResolveBeanClass(mbd, typesToMatch);
+      }
+   }
+   catch (PrivilegedActionException pae) {
+      ClassNotFoundException ex = (ClassNotFoundException) pae.getException();
+      throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), ex);
+   }
+   catch (ClassNotFoundException ex) {
+      throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), ex);
+   }
+   catch (LinkageError err) {
+      throw new CannotLoadBeanClassException(mbd.getResourceDescription(), beanName, mbd.getBeanClassName(), err);
+   }
+}
+```
+
+
+
+
+
 ### #resolveBeforeInstantiation - 实例化前的工作
+
+该方法也可以负责创建Bean实例，如果创建了自定义Bean实例就不需要在通过Spring的doCreateBean创建。
 
 ```java
 // AbstractAutowireCapableBeanFactory
@@ -187,4 +227,177 @@ public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, St
 ```
 
 
+
+## #doCreateBean - 创建Bean对象
+
+```java
+protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final @Nullable Object[] args)
+    throws BeanCreationException {
+        // Instantiate the bean.
+        BeanWrapper instanceWrapper = null;
+        if (mbd.isSingleton()) {
+            	instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+        }
+        if (instanceWrapper == null) {
+            	instanceWrapper = createBeanInstance(beanName, mbd, args);
+        }
+        final Object bean = instanceWrapper.getWrappedInstance();
+        Class<?> beanType = instanceWrapper.getWrappedClass();
+        if (beanType != NullBean.class) {
+            	mbd.resolvedTargetType = beanType;
+        }
+
+        // Allow post-processors to modify the merged bean definition.
+        synchronized (mbd.postProcessingLock) {
+                if (!mbd.postProcessed) {
+                    try {
+                        	applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+                    } catch (Throwable ex) {
+                        	throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                                                        "Post-processing of merged bean definition failed", ex);
+                    }
+                    mbd.postProcessed = true;
+                }
+        }
+
+        // Eagerly cache singletons to be able to resolve circular references
+        // even when triggered by lifecycle interfaces like BeanFactoryAware.
+        boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
+                                          isSingletonCurrentlyInCreation(beanName));
+        if (earlySingletonExposure) {
+                if (logger.isTraceEnabled()) {
+                        logger.trace("Eagerly caching bean '" + beanName +
+                                     "' to allow for resolving potential circular references");
+                }
+                addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
+        }
+
+        // Initialize the bean instance.
+        Object exposedObject = bean;
+        try {
+                populateBean(beanName, mbd, instanceWrapper);
+                exposedObject = initializeBean(beanName, exposedObject, mbd);
+        }  catch (Throwable ex) {
+                if (ex instanceof BeanCreationException && beanName.equals(((BeanCreationException) ex).getBeanName())) {
+                        throw (BeanCreationException) ex;
+                }   else {
+                        throw new BeanCreationException(
+                            mbd.getResourceDescription(), beanName, "Initialization of bean failed", ex);
+                }
+        }
+
+        if (earlySingletonExposure) {
+                Object earlySingletonReference = getSingleton(beanName, false);
+                if (earlySingletonReference != null) {
+                    if (exposedObject == bean) {
+                            exposedObject = earlySingletonReference;
+                    } else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
+                            String[] dependentBeans = getDependentBeans(beanName);
+                            Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
+                            for (String dependentBean : dependentBeans) {
+                                    if (!removeSingletonIfCreatedForTypeCheckOnly(dependentBean)) {
+                                            actualDependentBeans.add(dependentBean);
+                                    }
+                            }
+                            if (!actualDependentBeans.isEmpty()) {
+                                throw new BeanCurrentlyInCreationException(beanName,
+                                                                           "Bean with name '" + beanName + "' has been injected into other beans [" +
+                                                                           StringUtils.collectionToCommaDelimitedString(actualDependentBeans) +
+                                                                           "] in its raw version as part of a circular reference, but has eventually been " +
+                                                                           "wrapped. This means that said other beans do not use the final version of the " +
+                                                                           "bean. This is often the result of over-eager type matching - consider using " +
+                                                                           "'getBeanNamesOfType' with the 'allowEagerInit' flag turned off, for example.");
+                            }
+                        }
+                }
+        }
+
+        // Register bean as disposable.
+        try {
+            registerDisposableBeanIfNecessary(beanName, bean, mbd);
+        } catch (BeanDefinitionValidationException ex) {
+            throw new BeanCreationException(
+                mbd.getResourceDescription(), beanName, "Invalid destruction signature", ex);
+        }
+
+        return exposedObject;
+}
+
+```
+
+
+
+
+
+### #createBeanInstance - 创建Bean的实例对象
+
+实例的创建方法，会有不同的实例化策略。
+
+```java
+protected BeanWrapper createBeanInstance(String beanName, RootBeanDefinition mbd, @Nullable Object[] args) {
+   // Make sure bean class is actually resolved at this point.
+    // 该方法上面解析过
+   Class<?> beanClass = resolveBeanClass(mbd, beanName);
+	
+    // 看报错信息就知道了
+    // 类不是public的，无法访问。
+   if (beanClass != null && !Modifier.isPublic(beanClass.getModifiers()) && !mbd.isNonPublicAccessAllowed()) {
+          throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                "Bean class isn't public, and non-public access not allowed: " + beanClass.getName());
+   }
+	
+    // 这里是第一种创建方法
+    // 1. 通过mbd存在的instanceSupplier
+   Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
+   if (instanceSupplier != null) {
+      		return obtainFromSupplier(instanceSupplier, beanName);
+   }
+	
+    // 这里是第二种方法
+    //  2.通过工厂方法获取
+   if (mbd.getFactoryMethodName() != null) {
+      		return instantiateUsingFactoryMethod(beanName, mbd, args);
+   }
+
+   // Shortcut when re-creating the same bean...
+    // 3. 重新创建相同的Bean实例的方法
+   boolean resolved = false;
+   boolean autowireNecessary = false;
+   if (args == null) {
+          synchronized (mbd.constructorArgumentLock) {
+                 if (mbd.resolvedConstructorOrFactoryMethod != null) {
+                        resolved = true;
+                        autowireNecessary = mbd.constructorArgumentsResolved;
+                 }
+          }
+   }
+   if (resolved) {
+          if (autowireNecessary){ 
+              	return autowireConstructor(beanName, mbd, null, null);
+          } else {
+                return instantiateBean(beanName, mbd);
+          }
+   }
+
+   // Candidate constructors for autowiring?
+   // 4.通过Autowire创建
+   // 具体的创建方式未知
+   Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
+   if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
+         mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
+      		return autowireConstructor(beanName, mbd, ctors, args);
+   }
+
+   // Preferred constructors for default construction?
+    // 5.使用首选的构造函数创建
+   ctors = mbd.getPreferredConstructors();
+   if (ctors != null) {
+      	return autowireConstructor(beanName, mbd, ctors, null);
+   }
+
+   // No special handling: simply use no-arg constructor.
+    // 6. 使用默认的构造函数创建
+   return instantiateBean(beanName, mbd);
+}
+```
 
