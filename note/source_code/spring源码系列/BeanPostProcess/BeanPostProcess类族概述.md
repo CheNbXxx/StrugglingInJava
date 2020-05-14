@@ -1,8 +1,8 @@
 # BeanPostProcessor类族
 
-> BeanPostProcessor是Spring中的核心钩子方法，它的许多子类分别提供了不同时间不同形式的回调。
+> BeanPostProcessor是Spring中的核心钩子方法，它的许多子类分别提供了不同时间不同形式的回调，总计10个扩展点。
 >
-> 本文只作简单的介绍。
+> 本文只作简单的介绍，着重在相关钩子方法的调用时机。
 
 <!-- more -->
 
@@ -16,7 +16,7 @@
 
 ## BeanPostProcessors
 
-**提供了初始化前后的钩子方法。**
+Spring中最基础的扩展类，**提供了初始化前后的钩子方法。**
 
  ![image-20200512111500702](/home/chen/github/_java/pic/image-20200512111500702.png)
 
@@ -28,15 +28,17 @@ postProcessBeforeInitialization是在初始化前调用的钩子方法，而post
 
 如图所示，在调用init-method方法的前后分别会调用before和after两个钩子方法。
 
-另外的postProcessAfterInitialization方法还会在自定义实例化之后调用。
+另外的postProcessAfterInitialization方法还会在完成自定义实例化之后调用。
 
  ![image-20200514215136761](/home/chen/github/_java/pic/image-20200514215136761.png)
 
-上图的方法在createBean的中间部分，解析出Class对象，处理完覆写方法，就会调用该方法尝试自定义实例化。
+上图的片段在createBean方法的中间部分，解析出Class对象，处理完覆写方法，就会调用该方法尝试自定义实例化。
 
 如果自定义实例化成功，也会遍历调用postProcessAfterInitialization方法。
 
 在调用postProcessAfterInitialization方法之上的applyBeanPostProcessorsBeforeInstantiation方法就是自定义的实例化方法的调用，是对InstantiationAwareBeanPostProcessor的前置钩子方法的处理。
+
+
 
 
 
@@ -52,21 +54,23 @@ postProcessBeforeInitialization是在初始化前调用的钩子方法，而post
 
 在上文resolveBeforeInstantiation方法的截图中也可以看到该方法的执行点。
 
-PostProcessAfterInstantiation方法则是在实例化之后但在属性填充之前的钩子方法，若返回false则跳过属性填充方法。
+postProcessAfterInstantiation方法则是在实例化之后但在属性填充之前的钩子方法，若返回false则跳过属性填充方法。
 
 下图是doCreateBean -> populateBean方法的片段:
 
  ![image-20200514220943898](/home/chen/github/_java/pic/image-20200514220943898.png)
 
-可以看到PostProcessAfterInstantiation后置方法的执行逻辑以及要求，首先就需要BeanDefinition不是合成的。
+可以看到postProcessAfterInstantiation后置方法的执行逻辑以及要求，首先就需要BeanDefinition不是合成的。
 
-而postProcessProperties也是在属性被填充之前被调用，返回一个自定义的PropertyValues对象，传入当前的属性集合，实例对象以及bean名称，可以在该方法中修改属性集合。
+postProcessProperties也是在属性被填充之前被调用，返回一个自定义的PropertyValues对象，传入当前的属性集合，实例对象以及bean名称，可以在该方法中修改属性集合。
+
+该属性集合最终会被填充到Bean中。
 
 下图也是doCreateBean -> populateBean方法的片段:
 
  ![image-20200514221355982](/home/chen/github/_java/pic/image-20200514221355982.png)
 
-除了postProcessProperties方法，postProcessPropertyValues方法也有可能被调用。
+除了postProcessProperties方法，在其未生效时，postProcessPropertyValues方法也会被尝试调用。
 
 但其实postProcessPropertyValues方法在接口中已经被声明为不推荐使用的。
 
@@ -77,8 +81,6 @@ PostProcessAfterInstantiation方法则是在实例化之后但在属性填充之
 ## SmartInstantiationAwareBeanPostProcessor
 
 该接口扩展了InstantiationAwareBeanPostProcessor，**主要是实例化过程中获取Class对象等一些逻辑的扩展。**
-
-所以内部存在(3+3+2)8个钩子方法。
 
  ![image-20200513071519512](/home/chen/github/_java/pic/image-20200513071519512.png)
 
@@ -142,7 +144,7 @@ postProcessMergedBeanDefinition在Bean实例化完成之后被调用。
 
 ![image-20200514222416349](/home/chen/github/_java/pic/image-20200514222416349.png) 
 
-调用该方法之前，Bean已经通过createBeanInstance方法使用Spring支持的方法进行实例化。
+调用该方法之前，Bean已经通过createBeanInstance方法使用Spring提供的方法进行实例化。
 
 
 
