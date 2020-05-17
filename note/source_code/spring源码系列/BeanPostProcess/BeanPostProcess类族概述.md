@@ -162,6 +162,8 @@ requiresDestruction则是判断是否需要注册上述方法。
 
 
 
+
+
 以下是Spring Boot中Bean在创建时，doCreateBean方法的最后一步。
 
  ![image-20200514213511886](/home/chen/github/_java/pic/image-20200514213511886.png)

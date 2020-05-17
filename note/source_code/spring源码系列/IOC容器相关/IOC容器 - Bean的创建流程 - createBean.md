@@ -820,7 +820,7 @@ protected boolean requiresDestruction(Object bean, RootBeanDefinition mbd) {
 
    从mbd中直接获取也好，或者根据mbd解析，创建对象的前提是必须拿到对象的Class对象。
 
-2. 前置实例化，通过InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation的钩子方法，尝试自定义提前实例化对象，成功则执行后置方法并退出。
+2. 前置实例化，通过InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation的钩子方法，尝试自定义提前实例化对象，成功则执行后置方法并退出，因此自定义实例化时对象的属性填充也需要自定义。
 
 3. doCreateBean容器实例化，具体流程如下：
 
@@ -828,12 +828,10 @@ protected boolean requiresDestruction(Object bean, RootBeanDefinition mbd) {
    2. 有一个MergedBeanDefinitionPostProcessor的钩子方法的执行，不过暂时不懂先忽略。
    3. 之后是在需要的情况下暴露早期引用，这个是用于解决循环引用问题的，获取早期引用的过程涉及到SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference方法的调用。
    4. 属性填充，populateBean中也提供了byType和byName两种填充方式，还有可以自定义的InstantiationAwareBeanPostProcessor#postProcessProperties方法的调用。
-   5. 最终初始化，这里是对Bean中各种属性的确定，会调用InitializeBean接口的钩子方法，以及init-method指定的自定义初始化方法，另外也有对所有BeanPostProcessor的后置方法的调用。
+   5. 最终初始化，这里是对Bean中各种属性的确定，会调用InitializeBean接口的钩子方法，填充XXXAware对应的Bean对象，以及init-method指定的自定义初始化方法，另外也有对所有BeanPostProcessor的后置方法的调用。
    6. 注册DisposableBean，该方法注册的是在容器销毁时，释放资源等的操作，涉及到的DestructionAwareBeanPostProcessors的钩子方法。
 
 在对Spring应用进行扩展开发时，就需要直到各种时间段的各种扩展点，方便插入自己的逻辑。
 
 另外除了主方法，其他方法的异常处理逻辑我都保留了，通过异常信息也能了解很多系统的执行逻辑。
-
-
 
