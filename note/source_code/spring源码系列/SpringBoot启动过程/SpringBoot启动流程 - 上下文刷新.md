@@ -629,3 +629,17 @@ protected void initLifecycleProcessor() {
 
 
 其中蛮多的方法并没有讲清楚,先画圈在填色吧.
+
+
+
+## 总结
+
+自我认为该阶段的主要作用如下：
+
+1. BeanFactoryPostProcessor的调用(重点是ConfigurationClassPostProcessor)
+2. BeanPostProcessor的注册
+3. 初始化消息源/国际化
+4. 初始化广播器并注册监听器
+5. 初始化所有BeanDefinition，懒加载除外
+6. 发布ContextRefreshedEvent
+

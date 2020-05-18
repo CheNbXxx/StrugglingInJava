@@ -8,9 +8,7 @@
 
 [TOC]
 
-
-
-## #prepareContext
+## #prepareContext - 主调用逻辑
 
 ```java
 	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
@@ -60,7 +58,7 @@
 
 
 
-### #postProcessApplicationContext
+### #postProcessApplicationContext - 应用上下文的后续处理
 
 主要也是对上下文做一些配置。
 
@@ -103,7 +101,7 @@ protected void postProcessApplicationContext(ConfigurableApplicationContext cont
 
 
 
-### #applyInitializers
+### #applyInitializers - 应用全部的初始化器
 
 此方法内会调用在构造函数中填充的全部初始化器的`initialize`方法.
 
@@ -126,15 +124,23 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 }
 ```
 
+初始化器在SpringApplication中就通过工厂加载模式加载到SprigApplication的initializers属性。
+
+可以在初始化器中完成对应用上下文的修改。
 
 
-###  listeners#contextPrepared
+
+
+
+###  listeners#contextPrepared - 发布ApplicationContextInitializedEvent
 
 以下为具体的监听者
 
  ![image-20200414232431965](../../../../pic/image-20200414232431965.png)
 
 功能先忽略.
+
+
 
 
 
@@ -195,7 +201,7 @@ load(context, sources.toArray(new Object[0]));
 
 
 
-#### #getAllSources
+#### #getAllSources - 获取所有属性源
 
 该方法用来合并所有的sources并返回。
 
@@ -219,7 +225,7 @@ public Set<Object> getAllSources() {
 
 
 
-#### #load
+#### #load - 加载属性
 
 该方法负责创建BeanDefinitionLoader并调用。
 
@@ -267,7 +273,7 @@ protected void load(ApplicationContext context, Object[] sources) {
 
 
 
-### listeners#contextLoaded
+### listeners#contextLoaded - 发布ApplicationPreparedEvent
 
 ApplicationPreparedEvent的发布流程和其他的不同，这里单独记一下。
 
@@ -289,8 +295,27 @@ public void contextLoaded(ConfigurableApplicationContext context) {
 }
 ```
 
-**到ApplicationPreparedEvent之后，监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
+在该事件发布之后，监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
 
 该事件触发的对应监听器有以下五个：
 
  ![image-20200415101613282](../../../../pic/image-20200415101613282.png)
+
+
+
+
+
+## 总结
+
+上下文准备阶段是在环境配置完毕，且上下文容器已经创建之后才被调用的。
+
+该阶段主要的作用有以下：
+
+1. 应用全部的初始化器
+2. 发布ApplicationContextInitializedEvent
+3. 加载BeanDefinition
+4. 发布ApplicationPreparedEvent
+
+
+
+其中加载BeanDefinition是加载所有的配置源中的BeanDefinition，可以理解为种子，在之后的流程中会从中解析出更多。

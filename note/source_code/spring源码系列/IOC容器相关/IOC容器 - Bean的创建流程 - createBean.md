@@ -570,7 +570,6 @@ protected void populateBean(String beanName, RootBeanDefinition mbd, @Nullable B
     if (hasInstAwareBpps) {
             if (pvs == null) {
                 	pvs = mbd.getPropertyValues();
-   
             }
         	// 这里遍历BeanPostProcessor中的InstantiationAwareBeanPostProcessor
             for (BeanPostProcessor bp : getBeanPostProcessors()) {
@@ -834,4 +833,6 @@ protected boolean requiresDestruction(Object bean, RootBeanDefinition mbd) {
 在对Spring应用进行扩展开发时，就需要直到各种时间段的各种扩展点，方便插入自己的逻辑。
 
 另外除了主方法，其他方法的异常处理逻辑我都保留了，通过异常信息也能了解很多系统的执行逻辑。
+
+具体的实例化和属性注入流程需要额外分析。
 

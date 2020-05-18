@@ -29,7 +29,7 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 
 
-## 环境容器概述
+## 环境容器概述 - Environment类族
 
 上文说过方法的主要目的就是加载各种环境配置,并返回一个`ConfigurableEnvironment`.
 
@@ -85,7 +85,7 @@ activeProfiles是激活的配置文件。
 
 
 
-## #prepareEnvironment
+## #prepareEnvironment - 主调用逻辑
 
 ```java
 // SpringApplication	
@@ -114,7 +114,7 @@ private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners
 
 
 
-### #getOrCreateEnvironment
+### #getOrCreateEnvironment - 获取或创建环境容器
 
 根据不同的应用类型创建不同的环境类型。
 
@@ -144,7 +144,7 @@ private ConfigurableEnvironment getOrCreateEnvironment() {
 
 
 
-### #configureEnvironment
+### #configureEnvironment  - 配置Profile和Property
 
 ```java
 protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
@@ -164,7 +164,7 @@ protected void configureEnvironment(ConfigurableEnvironment environment, String[
 
 
 
-#### #configureProfiles
+#### #configureProfiles - 配置Profile
 
 ```java
 protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
@@ -178,7 +178,7 @@ protected void configureProfiles(ConfigurableEnvironment environment, String[] a
 
 
 
-#### #configurePropertySources
+#### #configurePropertySources - 配置Property
 
 配置PropertySources中的PropertySources可以理解为就是AbstractEnvironment#propertySources。
 
@@ -222,7 +222,7 @@ protected void configurePropertySources(ConfigurableEnvironment environment, Str
 
 
 
-### ConfigurationPropertySources#attach
+### ConfigurationPropertySources#attach - 内部备份
 
 ```java
 private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";
@@ -255,11 +255,11 @@ public static void attach(Environment environment) {
 
 
 
-### listeners#environmentPrepared
+### listeners#environmentPrepared - 触发ApplicationEnvironmentPreparedEvent事件
 
 发布ApplicationEnvironmentPreparedEvent。
 
-ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。
+**ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文件中的配置。**
 
 此处会触发包含`ConfigFileApplicationListener`在内的七个监听器。
 
@@ -271,7 +271,7 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 
 
-### #bindToSpringApplication
+### #bindToSpringApplication - 应用绑定
 
 将准备好的容器环境绑定到当前的上下文。
 
@@ -291,7 +291,7 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 
 
-### ConfigurationPropertySources#attach
+### ConfigurationPropertySources#attach - 内部重新备份
 
 这是第二次调用该方法。
 
@@ -301,9 +301,9 @@ ApplicationEnvironmentPreparedEvent在监听器中会加载yml和properties文�
 
 ## 总结
 
-`prepareEnvironment`方法的主要作用就是准备环境,整合各个来源中的配置，并全部配置到Environment的实现类中。
+`prepareEnvironment`方法的主要作用就是加载配置，通过ConfigFileApplicationListener获取所有配置属性。
 
-如开头所说，配置中最主要的两块内容是Property和Profiles。
+如开头所说，配置中最主要的两块内容是`Property`和`Profiles`。
 
 Property除了加载别的属性之后，一他会存放一份副本在他的集合中，二还有一些默认配置和命令行配置。
 
