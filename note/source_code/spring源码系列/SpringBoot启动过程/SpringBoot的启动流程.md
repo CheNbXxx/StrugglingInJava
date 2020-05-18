@@ -215,13 +215,15 @@ private SpringApplicationRunListeners getRunListeners(String[] args) {
 }
 ```
 
-**Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`这个工具类的形式发布.**
+**Spring中的事件发布一般是通过`ApplicationContext`实现,但是此时并没有准备好应用上下文,所以会以`SpringApplicationRunListeners`这个工具类的形式发布事件**
 
 `SpringApplicationRunListeners`内部封装了Log对象和`SpringApplicationRunListener`（前面的有个s）的集合.
 
 而`SpringApplicationRunListener`是对启动过程中事件发布的规范接口，定义了各种相关事件，一个抽象方法对应一个事件类型。
 
-其默认的实现只有`EventPublishingRunListener`.
+ ![image-20200518230122762](../../../../pic/image-20200518230122762.png)
+
+其默认的实现只有`EventPublishingRunListener`，以下为EventPublishingRunListener的构造函数。
 
 ```java
 // EventPublishingRunListener的构造函数
@@ -237,7 +239,9 @@ public EventPublishingRunListener(SpringApplication application, String[] args) 
 
 从构造函数也可以看出,`EventPublishingRunListener`就是对广播器的一个封装,事件广播最终还是会通过`SimpleApplicationEventMulticaster`.
 
-详细的可以看[Spring的事件模型](./Spring的事件模型.md#SpringBoot启动过程中的事件)
+而ApplicationContext作为事件发布器也是通过SimpleApplicationEventMulticaster的。
+
+详细的可以看[Spring的事件模型](../SpringBoot功能特性/SpringBoot的事件模型 .md)
 
 
 
@@ -261,7 +265,9 @@ ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationA
 
 [SpringBoot启动过程中的环境准备](./SpringBoot启动过程中的环境准备.md)
 
-**该方法中主要配置了Property以及Profile属性，发布ApplicationEnvironmentPreparedEvent事件。**
+**该方法中主要配置了Property以及Profile属性**
+
+**涉及到ApplicationEnvironmentPreparedEvent事件的发布，响应的ConfigFileApplicationListener中回去读取配置文件的内容。**
 
 **并在该时间的响应中通过`ConfigFileApplicationListener`读取了配置文件的所有配置。**
 
@@ -341,10 +347,10 @@ prepareContext(context, environment, listeners, applicationArguments, printedBan
 
 该方法主要作用如下：
 
-1. 执行所有的ApplicationContextInitializer类
-2. 发布ApplicationContextInitializedEvent
-3. 加载sources中的BeanDefinition
-4. 发布ApplicationPreparedEvent
+1. **执行所有的ApplicationContextInitializer类**
+2. **发布ApplicationContextInitializedEvent**
+3. **加载sources中的BeanDefinition**
+4. **发布ApplicationPreparedEvent**
 
 中间还会穿插一些对应用上下文的配置
 
@@ -367,10 +373,10 @@ refreshContext(context);
 1. 进一步配置BeanFactory，可能会伴随着BeanFactory的刷新
 2. 调用所有的BeanFactoryPostProcessor，其中会有ConfigurationClassPostProcessor的调用，加载所有的BeanDefinition
 3. 注册所有BeanPostProcessor
-4. 初始化国际化消息
+4. 初始国际化消息
 5. 初始化广播器，并注册监听器，从此之后事件由应用上下文发布
 6. 初始化所有BeanDefinition
-7. 发布ContextRefreshedEvent
+7. **发布ContextRefreshedEvent**
 
 具体可以看下面的文章：
 
@@ -379,8 +385,6 @@ refreshContext(context);
 
 
 ### 11. 计时结束
-
-
 
 ```java
 // SpringApplication
@@ -411,7 +415,71 @@ public void stop() throws IllegalStateException {
 
 不是很懂。
 
+所以这个时间指的是run方法开始到准备ApplicationContext完成的这段时间。
+
+
+
+### 12. 发布ApplicationStartedEvent
+
+```java
+// SpringApplication
+listeners.started(context);
+
+// 	EventPublishingRunListener
+@Override
+public void started(ConfigurableApplicationContext context) {
+    	context.publishEvent(new ApplicationStartedEvent(this.application, this.args, context));
+}
+```
+
+可以看到，在刷新过程中准备好上下文中的事件发布器之后，事件发布开始由ApplicationContext发布。
+
+响应的监听器如下：
+
+ ![image-20200518233627311](/home/chen/github/_java/pic/image-20200518233627311.png)
+
+
+
+### 13. 调用相关Runner
+
+```java
+// SpringApplication#run
+callRunners(context, applicationArguments);
+
+// SpringApplication
+private void callRunners(ApplicationContext context, ApplicationArguments args) {
+        List<Object> runners = new ArrayList<>();
+    	// 从上下文中获取ApplicationRunner和CommandLineRunner的Bean对象
+        runners.addAll(context.getBeansOfType(ApplicationRunner.class).values());
+        runners.addAll(context.getBeansOfType(CommandLineRunner.class).values());
+    	// 排序
+        AnnotationAwareOrderComparator.sort(runners);
+    	// 遍历调用run方法
+        for (Object runner : new LinkedHashSet<>(runners)) {
+            if (runner instanceof ApplicationRunner) {
+                	callRunner((ApplicationRunner) runner, args);
+            }
+            if (runner instanceof CommandLineRunner) {
+                	callRunner((CommandLineRunner) runner, args);
+            }
+        }
+}
+```
+
+方法逻辑很简单，从当前上下文中获取ApplicationRunner和CommandLineRunner类型的Bean对象。
+
+然后排序并遍历调用run方法。
+
+这个排序需要注意的是只有Ordered接口或者@Order。
 
 
 
 
+
+### 14. 发布ApplicationReadyEvent事件
+
+事件发布的逻辑和发布ApplicationStartedEvent一致。
+
+响应的监听器有如下几个：
+
+ ![image-20200518233344657](../../../../pic/image-20200518233344657.png)

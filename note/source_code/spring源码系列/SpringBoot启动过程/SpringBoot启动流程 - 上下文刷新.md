@@ -594,7 +594,9 @@ protected void finishRefresh() {
 }
 ```
 
+需要注意的是这个ContextRefreshedEvent并不是SpringBoot启动流程中包含的事件。
 
+以下是生命周期处理器的初始化过程：
 
 ```java
 // AbstractApplicationContext

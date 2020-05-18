@@ -179,7 +179,7 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 
 
 
-#### 获取广播器
+#### #getApplicationEventMulticaster -  获取广播器
 
 - 返回实例化的广播器，否则就抛出异常。
 
@@ -196,7 +196,7 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 
 
 
-#### 事件发布
+#### #multicastEvent - 事件发布
 
 `multicastEvent`是最终广播的方法，Spring中提供了`SimpleApplicationEventMulticaster`作为默认实现。
 
@@ -223,7 +223,7 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 
 
 
-##### 获取所有监听者
+##### #getApplicationListeners - 获取所有监听者
 
 - 获取所有匹配监听者的方法逻辑在`AbstractApplicationEventMulticaster`中。
 
@@ -359,7 +359,7 @@ AbstractApplicationContext继承自ConfigurableApplicationContext接口，该接
 
 
 
-##### 发布对应的事件
+##### #multicastEvent - 发布对应的事件
 
 - 事件的发布就是获取所有监听者之后，再遍历调用监听者的公有接口方法。
 - 三级调用链下去，最终调用ApplicationListener的onApplicationEvent方法。
