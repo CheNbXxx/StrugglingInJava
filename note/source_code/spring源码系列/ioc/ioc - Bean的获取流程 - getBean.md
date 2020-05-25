@@ -1,8 +1,8 @@
 # IOC容器 - Bean的获取流程
 
-> 本文主要讲的是AbstractBeanFactory类中doGetBean方法的流程。
+> 本文主要以AbstractBeanFactory类中doGetBean方法作为切入点，
 >
-> 相关的获取流程只会关注于单例模式的。
+> 相关的获取流程也只会关注于单例模式的。
 
 <!-- more -->
 
@@ -14,13 +14,13 @@
 
 ## 概述
 
-本文重点是Bean的获取流程，主要的方法就是AbstractBeanFactory#doGetBean。
+本文重点是Bean的获取过程，以AbstractBeanFactory#doGetBean为切入点。
 
-除了整理清楚Bean的获取流程，也希望能明白，BeanFactory中的各种缓存集合的作用。
+主要是整理获取的各个流程，以及对各种缓存集合的作用。
 
 
 
-## AbstractBeanFactory#doGetBean
+## AbstractBeanFactory#doGetBean - 获取Bean对象
 
 ```java
 protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
@@ -263,6 +263,10 @@ SimpleAliasRegistry中存储别名的方式就是通过新旧Bean名称的映射
 
 有时原始的Bean名称可能也是个别名，所以此处需要while循环到名称不在作为Key存在于aliasMap中。
 
+**此处可以看出，Spring中存别名的方式是以别名为Key，以原始名称为Value的形式，最终还是需要以原始名称取Bean对象**
+
+用这种形式的目的应该是对于后续Bean修改的方便，不需要去修改每个别名的引用对象。
+
 
 
 ### #getSingleton - 三级缓存中获取Bean
@@ -307,7 +311,9 @@ protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 2. earlySingletonObjects - 存放单例对象的早期引用
 3. singletonFactories - 存放单例对象的ObjectFactory
 
-在最后创建的时候，Bean对象从singletonFactories中转移到了earlySingletonObjects中。<font size=2>(严格来说singletonFactories存的是ObjectFactory)</font>
+在最后创建的时候，Bean对象从singletonFactories中转移到了earlySingletonObjects中。<font size=2>(严格来说singletonFactories存的是ObjectFactory对象工厂)</font>。
+
+三级缓存是Spring处理循环依赖的基本结构。
 
 
 
@@ -323,6 +329,10 @@ public boolean isSingletonCurrentlyInCreation(String beanName) {
 该方法主要用于判断beanName对应的Bean对象是否在创建中。
 
 判断的依据也很简单，就是beanName在不在singletonsCurrentlyInCreation集合中。
+
+
+
+
 
 
 
@@ -356,9 +366,15 @@ protected void clearMergedBeanDefinition(String beanName) {
 
 在方法的异常处理catch中会将其删除，表示创建失败。
 
-此处将合成的BeanDefinition清除之后，如上文中的方法`getMergedBeanDefinition`以及`getMergedLocalBeanDefinition`中，都会重新去合成RootBeanDefinition，因为b.stale为true了。
+因为可能是之前创建失败时候的重新创建，所以此处需要将合成的BeanDefinition清除(b.stale = true)。
+
+此处涉及的缓存有`alreadyCreated`Set集合，表示Bean已经创建。
 
 
+
+
+
+之后应该算是创建流程了，但是逻辑仍然在doGetBean里。
 
 ### #getMergedLocalBeanDefinition - 获取合成的BeanDefinition
 
@@ -383,6 +399,10 @@ protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throw
 1. 从缓存中获取已经合并了的RootBeanDefinition，获取到了并且不为旧的就直接返回
 2. 从beanDefinitionMap中获取BeanDefinition，这步是必须要获取到的，没有则直接报错。
 3. 将获取到的BeanDefinition与其父BeanDefinition合并，如果有的话。
+
+此处涉及到`mergedBeandefinitions`的缓存，该缓存以beanName为Key，以合成后的RootBeanDefinition为Value。
+
+缓存合并的BeanDefinition，之后就不需要重新合并了。
 
 
 
@@ -412,7 +432,8 @@ public BeanDefinition getBeanDefinition(String beanName) throws NoSuchBeanDefini
 ```java
 protected RootBeanDefinition getMergedBeanDefinition(String beanName, BeanDefinition bd)
       throws BeanDefinitionStoreException {
-   return getMergedBeanDefinition(beanName, bd, null);
+    	// 空壳方法
+   		return getMergedBeanDefinition(beanName, bd, null);
 }
 ```
 
@@ -516,18 +537,87 @@ protected RootBeanDefinition getMergedBeanDefinition(
 
 方法的整体逻辑如下：
 
-1. 如果入参containingBd为空，则尝试去缓存中获取目标的BeanDefinition
-2. 如果**目标BeanDefinition过时或者并不在缓存中**，进入第3步，否则直接跳到第7步。
-3. 判断**入参的BeanDefinition是否有父级**，没有直接跳到第7步。
+1. 如果入参containingBd为空，则尝试去缓存中获取目标的RootBeanDefinition
+2. 如果**目标BeanDefinition过时或者并不在缓存中**，进入第3步，否则直接跳到第7步直接返回。
+3. 判断**入参的BeanDefinition是否有父级**，没有直接讲入参BeanDefinition包装成RootBeanDefinition并跳到第6步。
 4. 有的话会先获取BeanDefinition，根据**名称是否一样判断从当前BeanFactory中获取还是从父BeanFactory中获取。**
 5. 获取到父级BeanDefinition之后拿入参子BeanDefinition去覆盖一些父类的内容(这里就算合成吧)
-6. 设置合成后BeanDefinition的生命周期，并看情况设置缓存。
-7. 如果第2步中获取的BeanDefinition是过时而非没获取到，则将其与合成后的BeanDefinition合并。
-8. 返回合成后的BeanDefinition
+6. 设置合成后BeanDefinition的生命周期，并设置缓存。
+7. 返回合成后的BeanDefinition
+
+BeanDefinition不一定都有父BeanDefinition，没有的时候直接将自身包装成RootBeanDefinition，
+
+另外父级的BeanDefinition可能会存在于父级的BeanFactory中。
+
+
 
 **方法中只有在containingBd为空并且允许缓存的情况下才会去缓存合成的BeanDefinition。**
 
-另外父级的BeanDefinition可能会存在于父级的BeanFactory中。
+具体原因未知。
+
+
+
+### 确保依赖项的初始化
+
+```java
+...
+String[] dependsOn = mbd.getDependsOn();
+if (dependsOn != null) {
+        for (String dep : dependsOn) {
+                if (isDependent(beanName, dep)) {
+                        throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                                                        "Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
+                }
+                registerDependentBean(dep, beanName);
+                try {
+                        getBean(dep);
+                } catch (NoSuchBeanDefinitionException ex) {
+                        throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+                                                        "'" + beanName + "' depends on missing bean '" + dep + "'", ex);
+                }
+        }
+}
+...
+```
+
+该段代码属于doGetBean的片段。
+
+遍历BeanDefinition中的DependsOn集合，记录下依赖Bean的集合，并通过getBean创建对象。
+
+
+
+#### #registerDependentBean - 注册依赖的Bean
+
+```java
+	public void registerDependentBean(String beanName, String dependentBeanName) {
+        // 转化beanName
+		String canonicalName = canonicalName(beanName);
+
+		synchronized (this.dependentBeanMap) {
+			Set<String> dependentBeans =
+					this.dependentBeanMap.computeIfAbsent(canonicalName, k -> new LinkedHashSet<>(8));
+			if (!dependentBeans.add(dependentBeanName)) {
+				return;
+			}
+		}
+
+		synchronized (this.dependenciesForBeanMap) {
+			Set<String> dependenciesForBean =
+					this.dependenciesForBeanMap.computeIfAbsent(dependentBeanName, k -> new LinkedHashSet<>(8));
+			dependenciesForBean.add(canonicalName);
+		}
+	}
+```
+
+可以看到这里互相都会存。
+
+按照doGetBean的逻辑，beanName是被依赖的对象，dependentBeanName是依赖的对象。
+
+此时depentdentBeanMap和dependenciesForBean会存依赖的双向关系。
+
+对象依赖的所有对象，和依赖他的所有对象。
+
+
 
 
 
@@ -604,6 +694,8 @@ public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 
 1. 检查缓存中是否存在对象，存在就直接返回了
 2. 不存在则是和上文基本一致的创建逻辑，标记，创建对象，去除标记
+
+
 
 这里可以看一下创建Bean之后是如何添加缓存的，通过addSingleton方法
 
@@ -688,8 +780,8 @@ protected Object getObjectForBeanInstance(
           }
           boolean synthetic = (mbd != null && mbd.isSynthetic());
        		// 具体的getObject调用
-      	  // !synthetic就是shouldPostProcess
-          object = getObjectFromFactoryBean(factory, beanName, !synthetic就是showshouldPostProcess);
+      	  // !synthetic就是shouldPostProcess，判断是否需要执行BeanPostProcessor
+          object = getObjectFromFactoryBean(factory, beanName, !synthetic);
    }
    return object;
 }
@@ -753,7 +845,7 @@ protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanNam
                     	// 从factoryBeanObjectCache中获取对象，对象不为空就直接
                         Object object = this.factoryBeanObjectCache.get(beanName);
                         if (object == null) {
-                            	// 内层包括系统安全的东西有点不明白
+                            	// 方法内包括系统安全的东西有点不明白
                             	// 先简单当做 factory.getObject()
                                 object = doGetObjectFromFactoryBean(factory, beanName);
                                 // Only post-process and store if not put there already during getObject() call above
@@ -882,8 +974,8 @@ protected Object postProcessObjectFromFactoryBean(Object object, String beanName
    1. singletonObjects
    2. earlySingletonObjects
    3. singletonFactory
-3. 缓存中没有或者参数不为空，则判断父级的BeanFactory是否有该Bean的实例化对象，有就返回
-4. 没有则开始创建流程，先获取合成的RootBeanDefinition
+3. 缓存中没有或者参数不为空，则判断父级的BeanFactory是否有该Bean的实例化对象，有就返回，没有则开始以下的创建流程，
+4. 获取合成的RootBeanDefinition
 5. 递归处理依赖问题
 6. 区分不同的生命周期实例化对象并返回
 
@@ -895,5 +987,5 @@ getObjectForBeanInstance方法更多的是对获取到的实例化对象的处�
 
 接下来就是依赖处理和CreateBean的流程了。
 
-详细的可以看：
+
 
