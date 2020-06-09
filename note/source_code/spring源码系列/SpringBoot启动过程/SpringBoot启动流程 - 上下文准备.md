@@ -64,7 +64,7 @@
 
 ### #postProcessApplicationContext - 应用上下文的后续处理
 
-主要也是对上下文做一些配置。
+主要也是对应用上下文做一些配置。
 
 ```java
 public static final String CONFIGURATION_BEAN_NAME_GENERATOR =
@@ -128,7 +128,7 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 }
 ```
 
-初始化器在SpringApplication中就通过工厂加载模式加载到SprigApplication的initializers属性。
+初始化器在SpringApplication构造函数中就通过工厂加载模式加载到initializers集合中。
 
 可以在初始化器中完成对应用上下文的修改。
 
@@ -144,6 +144,8 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
 
 功能先忽略.
 
+到此阶段，应用上下文初始化完毕。
+
 
 
 
@@ -154,6 +156,7 @@ public Set<ApplicationContextInitializer<?>> getInitializers() {
  // 获取beanFactory对象
 ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
 // 将args的包装对象注册为单例
+// 在enviromnt中其实也保留了applicationArguments
 beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 // 将Banner也注册了
 if (printedBanner != null) {
@@ -299,7 +302,7 @@ public void contextLoaded(ConfigurableApplicationContext context) {
 }
 ```
 
-在该事件发布之后，监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
+在该事件发布之后，**监听器已经和ApplicationContext绑定，所以之后的发布都会通过ApplicationContext完成**.
 
 该事件触发的对应监听器有以下五个：
 

@@ -140,7 +140,7 @@ protected void prepareRefresh() {
 3. 验证必要的资源
 4. 处理上下文启动前期的监听者
 
-这个前期的监听者是指在ApplicationContext在配置完成之前的事件都是由SpringApplicationRunListeners顶层分发的,之后则是以ApplicationContext为唯一事件分发器.
+这个前期的监听者是指在ApplicationContext在配置完成之前的事件都是由SpringApplicationRunListeners分发的,之后则是以ApplicationContext为唯一事件分发器.
 
 
 
@@ -174,6 +174,10 @@ public final ConfigurableListableBeanFactory getBeanFactory() {
 
 - 在Servlet Web的应用里面,obtainFreshBeanFactory就是个获取的方法,并没有刷新流程.
 - 具体的什么情况会刷新,什么情况只是简单获取.
+
+
+
+
 
 ## postProcessBeanFactory - BeanFactory的前置处理
 
@@ -242,6 +246,7 @@ protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
     beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
     // 新增一个BeanPostProcessor
+    // 判断是都是监听器，如果是则需要加入到对应的集合。
     beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
     // LoadTimeWeaver还不知道干啥的
@@ -251,7 +256,7 @@ protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
             beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
     }
 
-    // 注册环境Bean
+    // 注册运行环境相关Bean
     if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
         	beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
     }
@@ -303,6 +308,12 @@ protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory b
 
 - [BeanFactoryPostProcessor相关的整理](./BeanFactoryPostProcessor.md)
 
+调用链中最主要的还是ConfigurationClassPostProcessor，
+
+该类会从种子类(上下文准备阶段会将sources中的类加载到BeanFactory)，延伸获取更多的配置Bean。
+
+
+
 
 
 ## registerBeanPostProcessors - 注册BeanPostProcessors
@@ -312,85 +323,19 @@ protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory b
 registerBeanPostProcessors(beanFactory);
 
 protected void registerBeanPostProcessors(ConfigurableListableBeanFactory beanFactory) {
-    PostProcessorRegistrationDelegate.registerBeanPostProcessors(beanFactory, this);
+    	PostProcessorRegistrationDelegate.registerBeanPostProcessors(beanFactory, this);
 }
 ```
 
-
-
-### PostProcessorRegistrationDelegate#registerBeanPostProcessors
-
-```java
-public static void registerBeanPostProcessors(
-    	ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
-		// 获取所有的BeanPostProcessor类的Bean
-    	String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
-
-        // 添加BeanPostProcessorChecker
-        int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
-        beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
-
-		// 按照实现的不同接口筛选，划分到不同的集合
-        List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
-        List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
-        List<String> orderedPostProcessorNames = new ArrayList<>();
-        List<String> nonOrderedPostProcessorNames = new ArrayList<>();
-        for (String ppName : postProcessorNames) {
-                if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
-                        // 按照惯例，实现了PriorityOrdered的直接获取Bean对象
-                        BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
-                        priorityOrderedPostProcessors.add(pp);
-                        if (pp instanceof MergedBeanDefinitionPostProcessor) {
-                           		internalPostProcessors.add(pp);
-                        }
-                } else if (beanFactory.isTypeMatch(ppName, Ordered.class)) {
-                    	orderedPostProcessorNames.add(ppName);
-                } else {
-                    	nonOrderedPostProcessorNames.add(ppName);
-                }
-        }
-			
-    	// 按照PriorityOrdered -> Ordered -> other
-    	// 排序并添加到BeanFactory
-        sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
-        registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
-        List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>(orderedPostProcessorNames.size());
-        for (String ppName : orderedPostProcessorNames) {
-                BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
-                orderedPostProcessors.add(pp);
-                if (pp instanceof MergedBeanDefinitionPostProcessor) {
-                    	internalPostProcessors.add(pp);
-                }
-        }
-        sortPostProcessors(orderedPostProcessors, beanFactory);
-        registerBeanPostProcessors(beanFactory, orderedPostProcessors);
-        List<BeanPostProcessor> nonOrderedPostProcessors = new ArrayList<>(nonOrderedPostProcessorNames.size());
-        for (String ppName : nonOrderedPostProcessorNames) {
-                BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
-                nonOrderedPostProcessors.add(pp);
-                if (pp instanceof MergedBeanDefinitionPostProcessor) {
-                    	internalPostProcessors.add(pp);
-                }
-        }
-        registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
-
-        // Finally, re-register all internal BeanPostProcessors.
-        sortPostProcessors(internalPostProcessors, beanFactory);
-        registerBeanPostProcessors(beanFactory, internalPostProcessors);
-
-        // Re-register post-processor for detecting inner beans as ApplicationListeners,
-        // moving it to the end of the processor chain (for picking up proxies etc).
-        beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
-}
-```
-
-
+此处仅是注册，也会按照PriorityOrdered和Ordered的顺序。
 
 
 
 ## initMessageSource - 初始化消息源
 
-挖坑待填.
+大坑待填.
+
+主要是国际化的配置。
 
 
 
@@ -638,7 +583,7 @@ protected void initLifecycleProcessor() {
 
 自我认为该阶段的主要作用如下：
 
-1. BeanFactoryPostProcessor的调用(重点是ConfigurationClassPostProcessor)
+1. BeanFactoryPostProcessor的调用(重点是ConfigurationClassPostProcessor,该类会从已经注册的sources扩展注册所有BeanDefinition)
 2. BeanPostProcessor的注册
 3. 初始化消息源/国际化
 4. 初始化广播器并注册监听器
