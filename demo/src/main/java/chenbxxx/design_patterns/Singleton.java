@@ -87,7 +87,7 @@ public class Singleton {
      * 借由枚举类的特性,
      * 既能避免序列化问题,又能保证线程安全问题
      */
-    enum EnumMode{
+    private enum EnumMode{
         /**
          * 唯一实例对象
          */
