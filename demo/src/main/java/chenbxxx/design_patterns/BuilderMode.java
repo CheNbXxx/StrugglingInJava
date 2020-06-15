@@ -1,11 +1,14 @@
 package chenbxxx.design_patterns;
 
+import lombok.Builder;
+
 import java.awt.*;
 
 /**
  * @author chen
  * @date 2020/6/14 下午11:41
  */
+@Builder
 public class BuilderMode {
     class Director{
 
