@@ -26,10 +26,9 @@ public class FactoryMethod {
             return new FileReader(file);
         }
     }
-
-    interface FactoryMethodInterface {
-        Reader create(File file) throws FileNotFoundException;
-    }
+}
+interface FactoryMethodInterface {
+    Reader create(File file) throws FileNotFoundException;
 }
 
 
