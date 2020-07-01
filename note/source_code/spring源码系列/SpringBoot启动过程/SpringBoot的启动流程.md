@@ -2,6 +2,7 @@
 
 - 尽量不会有太多的代码，以理清楚流程为主，复杂的代码会单独一个文件。
 - 以SpringBoot Servlet Web应用为基础分析.
+- SpringBoot版本为2.2.6.RELEASE
 
 ---
 

@@ -124,7 +124,7 @@ public interface ApplicationEventPublisher {
 
 ## 自定义事件发布流程
 
-和观察者模式中一样，事件是由被观察者主动发布的。
+×Spring中事务的发布流程的核心方法在AbstractApplicationContext中。
 
 Spring中事务的发布流程的核心方法在AbstractApplicationContext中。
 

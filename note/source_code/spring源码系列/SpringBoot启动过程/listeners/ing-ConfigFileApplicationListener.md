@@ -1,6 +1,8 @@
 # ConfigFileApplicationListener
 
 > ConfigFileApplicationListener就是SpringBoot启动过程中加载配置文件的监听器。
+>
+> 它在环境准备也就是prepareEnvironment的时候被触发。
 
 <!-- more -->
 
@@ -12,9 +14,11 @@
 
 ## 概述
 
-该类会响应ApplicationEnvironmentPreparedEvent以及ApplicationPreparedEvent两个事件。
+其实除了ApplicationEnvironmentPreparedEvent事件，ConfigFile的监听器还会监听ApplicationPreparedEvent事件。
 
-接下来主要是对ApplicationEnvironmentPreparedEvent事件的响应。
+不过接下来主要是对ApplicationEnvironmentPreparedEvent事件的响应的分析。
+
+以下为事件响应逻辑的入口代码：
 
 ```java
 // 响应的调度方法
@@ -22,20 +26,18 @@
 @Override
 public void onApplicationEvent(ApplicationEvent event) {
        if (event instanceof ApplicationEnvironmentPreparedEvent) {
-           	// 对ApplicationEnvironmentPreparedEvent的响应方法
-          	onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
+                // 对ApplicationEnvironmentPreparedEvent的响应方法
+                onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
        }
        if (event instanceof ApplicationPreparedEvent) {
-          	onApplicationPreparedEvent(event);
+          		onApplicationPreparedEvent(event);
        }
 }
 ```
 
+<br>
 
-
-## #onApplicationEnvironmentPreparedEvent 
-
-对ApplicationEnvironmentPreparedEvent的响应逻辑主要就是加载环境的一些东西。
+## #onApplicationEnvironmentPreparedEvent  - 事件具体的响应方法
 
 ```java
 private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
@@ -52,18 +54,22 @@ private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPrepare
 }
 ```
 
-该方法主要就是逻辑如下：
+该方法主要就是逻辑不难：
 
-1. 通过工厂加载模式获取EnvironmentPostProcessor，加上监听器本身。
-2. 按照Order排序后，遍历执行postProcessEnvironment方法。
+1. 通过工厂加载模式获取EnvironmentPostProcessor，加上监听器本身，因为ConfigFileApplicationListener也继承了EnvironmentPostProcessor。
+2. 按照Order排序后，遍历执行postProcessEnvironment方法<font size=2>(这里要注意，ConfigFileApplicationListener的Order值比最高还高10)</font>
 
-可以看到Spring对环境的加载过程也可以借助EnvironmentPostProcessor来实现自定义的加载。
+可以看到Spring对环境的加载过程借助了EnvironmentPostProcessor来实现自定义的加载。
 
-我猜Consul等的配置中心会不会就是通过的这种方式。
+通过工厂加载模式用户可以扩展自己的自定义加载模式。
+
+ ![image-20200701232808616](/home/chen/github/_java/pic/image-20200701232808616.png)
+
+EnvironmentPostProcessor的接口很简单，只有一个方法，传入环境和应用，这里就不在赘述了。
 
 
 
-### #loadPostProcessors
+## #loadPostProcessors - 加载环境处理方法
 
 ```java
 	List<EnvironmentPostProcessor> loadPostProcessors() {
@@ -73,7 +79,7 @@ private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPrepare
 
 该方法再简单不过了，就是通过工厂加载机制获取`EnvironmentPostProcessor`类的实现。
 
-Debug时发现的`EnvironmentPostProcessor`有以下几个：
+Debug发现的`EnvironmentPostProcessor`有以下几个：
 
  ![image-20200329203541928](../../../../../pic/image-20200329203541928.png)
 
@@ -81,15 +87,19 @@ SystemEnvironmentPropertySourceEnvironmentPostProcessor是为了包装原有的�
 
 SpringApplicationJsonEnvironmentPostProcessor看名字也知道是配置Json的。
 
-其他的就先忽略.
+其他的就先忽略，或者说都先忽略。
+
+**因为主要的配置文件加载逻辑还是在ConfigFileApplicationListener自身的类中。**
+
+接下来分析，ConfigFileApplicationListener作为EnvironmentPostProcessor加载配置文件的具体流程。
 
 
 
+## #加载配置文件
 
+会详细分析配置文件的加载过程，代码略多，慎重。
 
-### #postProcessEnvironment
-
-ConfigFileApplicationListener本身也继承了EnvironmentPostProcessor，所以此时也会被调用。
+#### 1.入口方法
 
 ```java
 //  ConfigFileApplicationListener
@@ -106,35 +116,19 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 }
 ```
 
-看上去代码不多，点进去就是星辰大海。
-
-简单来说该方法的主要作用如下:
+该方法仅作为一个入口，做些最简单的准备工作：
 
 1. 添加一个随机数到配置中`environment.propertySource`。
-2. 加载本地配置文件
+2. 初始化Loader，并调用loader方法。
 
-整个的配置环境加载逻辑不出意外就全在Loader内部类中了。
-
-
-
-#### 随机数的作用
-
-添加的随机数如下:
-
- ![image-20200329205301295](../../../../../pic/image-20200329205301295.png)
-
- ![image-20200329205230168](../../../../..//pic/image-20200329205230168.png)
-
-上面就是RandomValuePropertySource的类注释.
-
-大意应该是下标超越random的属性都是非法的.
+随机数的作用仅作猜测，在文末有说明。
 
 
 
-#### Loader类的初始化
+#### 2. 初始化Loader类
 
 ```java
-// ConfigFileApplicationListener@Loader
+// ConfigFileApplicationListener#Loader
 Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
     // 配置了环境,占位符解析器,资源加载器,还有propertySourceLoader
     this.environment = environment;
@@ -148,9 +142,11 @@ Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
 }
 ```
 
-Loader初始化的逻辑也不复杂，就是配置环境，占位符处理器，资源加载器，以及PropertySource的加载器。
+Loader初始化的逻辑也不复杂，初始化的对象包括配置环境，占位符处理器，资源加载器，以及PropertySource的加载器。
 
-占位符处理器会经过一个初始化流程，以下是PropertySourcesPlaceholdersResolver的构造函数
+
+
+占位符处理器会经过一个初始化流程，以下是PropertySourcesPlaceholdersResolver的构造函数：
 
 ```java
 // SystemPropertyUtils
@@ -173,21 +169,25 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 }
 ```
 
-**可以看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"，这是我们使用PropertySource的常规表达**
+**直观的看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"，这就是我们使用PropertySource的常规表达式。**
 
-另外PropertySource的配置就是通过工厂模式获取到的两个PropertySourceLoader，具体如下：
+而PropertySource的配置就是通过工厂模式获取到的两个PropertySourceLoader，如下：
 
  ![image-20200329205729718](../../../../../pic/image-20200329205729718.png)
 
 分别对应了Properties和Yaml两种格式的PropertySource加载逻辑。
 
-此时Loader初始化完毕，其中制定了资源加载器，占位符，以及两个不同类型的资源加载器，分别负责不同类型的文件配置加载。
-
-再然后就是整个配置文件加载过程了，方法调用链有点长而且好多load重载方法.
 
 
+此时Loader初始化完毕，其中配置了资源加载器，占位符，以及两个不同类型的资源加载器，分别加载Properties和Yaml两种配置。
 
-#### #load
+**因为这里同样用到了工厂加载机制，所以也是一个扩展点，可以将自定义的配置读取类加载进来，只要实现PropertySourceLoader接口。**
+
+
+
+#### 3. Loader#load - 开始加载
+
+经过上文的初始化，此时已经有了两种PropertySourceLoader被加载进来，另外的加载器，占位符也就绪了。
 
 ```java
 // ConfigFileApplicationListener
@@ -197,27 +197,31 @@ static {
         Set<String> filteredProperties = new HashSet<>();
         filteredProperties.add("spring.profiles.active");
         filteredProperties.add("spring.profiles.include");
+    	// active和include封装成一个不可变的Set
         LOAD_FILTERED_PROPERTY = Collections.unmodifiableSet(filteredProperties);
 }
 
 // ConfigFileApplicationListener#load
 void load() {
+    // 调用的FilteredPropertrySource的apply方法，可以直接跳到下面
     FilteredPropertySource.apply(this.environment, DEFAULT_PROPERTIES, LOAD_FILTERED_PROPERTY,
                                  (defaultProperties) -> {
+                                     // 初始化各类本地参数
                                      this.profiles = new LinkedList<>();
                                      this.processedProfiles = new LinkedList<>();
                                      this.activatedProfiles = false;
                                      this.loaded = new LinkedHashMap<>();
                                      // 初始化profiles
                                      initializeProfiles();
+                                     // 遍历Profiles并逐个加载
                                      while (!this.profiles.isEmpty()) {
-                                         Profile profile = this.profiles.poll();
-                                         if (isDefaultProfile(profile)) {
-                                             addProfileToEnvironment(profile.getName());
-                                         }
-                                         load(profile, this::getPositiveProfileFilter,
-                                              addToLoaded(MutablePropertySources::addLast, false));
-                                         this.processedProfiles.add(profile);
+                                             Profile profile = this.profiles.poll();
+                                             if (isDefaultProfile(profile)) {
+                                                    addProfileToEnvironment(profile.getName());
+                                             }
+                                             load(profile, this::getPositiveProfileFilter,
+                                                  addToLoaded(MutablePropertySources::addLast, false));
+                                             this.processedProfiles.add(profile);
                                      }
                                      load(null, this::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addFirst, true));
                                      addLoadedPropertySources();
@@ -225,18 +229,22 @@ void load() {
                                  });
 }
 
-
 // FilteredPropertySource#apply
+// 各参数如下：
 // propertySourceName  ==>  defaultProperties
 // filteredProperties  ==>  spring.profiles.active ＆spring.profiles.include
 static void apply(ConfigurableEnvironment environment, String propertySourceName, Set<String> filteredProperties,
 			Consumer<PropertySource<?>> operation) {
+    	// 获取环境中的资源
 		MutablePropertySources propertySources = environment.getPropertySources();
+    	// 获取defaultProperties，
+        // 忘了这是什么可以在SpringApplication#configurePropertySources中看到
 		PropertySource<?> original = propertySources.get(propertySourceName);
+    	// 没有额外配置这里就是空的
 		if (original == null) {
-            // accept回跳到上面的内部类
-			operation.accept(null);
-			return;
+                // accept回跳到上面的内部类
+                operation.accept(null);
+                return;
 		}
 		propertySources.replace(propertySourceName, new FilteredPropertySource(original, filteredProperties));
 		try {
@@ -250,7 +258,7 @@ static void apply(ConfigurableEnvironment environment, String propertySourceName
 
 
 
-#### ConfigFileApplicationListener#initializeProfiles
+#### ConfigFileApplicationListener#initializeProfiles - 初始化Profile配置
 
 ```java
 
@@ -259,9 +267,9 @@ public static final String INCLUDE_PROFILES_PROPERTY = "spring.profiles.include"
 
 // ConfigFileApplicationListener#initializeProfiles
 private void initializeProfiles() {
-    // The default profile for these purposes is represented as null. We add it
-    // first so that it is processed first and has lowest priority.
+    // 新增一个null
     this.profiles.add(null);
+    // 获取全部配置的Profiles
     Set<Profile> activatedViaProperty = getProfilesFromPxmlroperty(ACTIVE_PROFILES_PROPERTY);
     Set<Profile> includedViaProperty = getProfilesFromProperty(INCLUDE_PROFILES_PROPERTY);
     List<Profile> otherActiveProfiles = getOtherActiveProfiles(activatedViaProperty, includedViaProperty);
@@ -380,9 +388,25 @@ private void load(String location, String name, Profile profile, DocumentFilterF
 }
 ```
 
-- 这个调用链真的太长了..还都是load方法 我选择放弃,有空再来吧
 
-其他的监听器也以后再说吧。
+
+
+
+
+
+#### 随机数的作用
+
+添加的随机数如下:
+
+ ![image-20200329205301295](../../../../../pic/image-20200329205301295.png)
+
+ ![image-20200329205230168](../../../../..//pic/image-20200329205230168.png)
+
+上面就是RandomValuePropertySource的类注释.
+
+大意应该是下标超越random的属性都是非法的.
+
+
 
 ## 小结
 
