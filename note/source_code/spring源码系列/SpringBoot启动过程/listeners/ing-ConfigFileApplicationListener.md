@@ -1,4 +1,4 @@
-# ConfigFileApplicationListener
+# SpringBoot配置文件的加载 - ConfigFileApplicationListener
 
 > ConfigFileApplicationListener就是SpringBoot启动过程中加载配置文件的监听器。
 >
@@ -35,7 +35,7 @@ public void onApplicationEvent(ApplicationEvent event) {
 }
 ```
 
-<br>
+
 
 ## #onApplicationEnvironmentPreparedEvent  - 事件具体的响应方法
 
@@ -69,7 +69,7 @@ EnvironmentPostProcessor的接口很简单，只有一个方法，传入环境�
 
 
 
-## #loadPostProcessors - 加载环境处理方法
+## #loadPostProcessors - 获取EnvironmentPostProcessor
 
 ```java
 	List<EnvironmentPostProcessor> loadPostProcessors() {
@@ -91,15 +91,17 @@ SpringApplicationJsonEnvironmentPostProcessor看名字也知道是配置Json的�
 
 **因为主要的配置文件加载逻辑还是在ConfigFileApplicationListener自身的类中。**
 
+
+
+
+
 接下来分析，ConfigFileApplicationListener作为EnvironmentPostProcessor加载配置文件的具体流程。
 
-
-
-## #加载配置文件
+## 加载配置文件
 
 会详细分析配置文件的加载过程，代码略多，慎重。
 
-#### 1.入口方法
+#### 入口方法
 
 ```java
 //  ConfigFileApplicationListener
@@ -125,20 +127,24 @@ protected void addPropertySources(ConfigurableEnvironment environment, ResourceL
 
 
 
-#### 2. 初始化Loader类
+先来说Loader的初始化过程
+
+#### Loader类初始化
+
+Loader的构造函数如下：
 
 ```java
 // ConfigFileApplicationListener#Loader
 Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) {
-    // 配置了环境,占位符解析器,资源加载器,还有propertySourceLoader
-    this.environment = environment;
-    // 占位符处理
-    this.placeholdersResolver = new PropertySourcesPlaceholdersResolver(this.environment);
-    // 资源加载器
-    this.resourceLoader = (resourceLoader != null) ? resourceLoader : new DefaultResourceLoader();
-    // 工厂加载模式加载PropertySourceLoader
-    this.propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class,
-                                                                     getClass().getClassLoader());
+        // 配置了环境,占位符解析器,资源加载器,还有propertySourceLoader
+        this.environment = environment;
+        // 占位符处理
+        this.placeholdersResolver = new PropertySourcesPlaceholdersResolver(this.environment);
+        // 资源加载器
+        this.resourceLoader = (resourceLoader != null) ? resourceLoader : new DefaultResourceLoader();
+        // 工厂加载模式加载PropertySourceLoader
+        this.propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class,
+                                                                         getClass().getClassLoader());
 }
 ```
 
@@ -146,7 +152,7 @@ Loader初始化的逻辑也不复杂，初始化的对象包括配置环境，�
 
 
 
-占位符处理器会经过一个初始化流程，以下是PropertySourcesPlaceholdersResolver的构造函数：
+以下是PropertySourcesPlaceholdersResolver的构造函数：
 
 ```java
 // SystemPropertyUtils
@@ -169,7 +175,9 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 }
 ```
 
-**直观的看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"，这就是我们使用PropertySource的常规表达式。**
+**透过构造函数，可以很直观的看到这边默认的前后符号以及分隔符号 "${"， "}"， ":"，这就是我们使用PropertySource的常规表达式。**
+
+
 
 而PropertySource的配置就是通过工厂模式获取到的两个PropertySourceLoader，如下：
 
@@ -183,9 +191,11 @@ public PropertySourcesPlaceholdersResolver(Iterable<PropertySource<?>> sources, 
 
 **因为这里同样用到了工厂加载机制，所以也是一个扩展点，可以将自定义的配置读取类加载进来，只要实现PropertySourceLoader接口。**
 
+而加载到的类才是最主要的工作类。	
 
 
-#### 3. Loader#load - 开始加载
+
+#### 开始加载 - load
 
 经过上文的初始化，此时已经有了两种PropertySourceLoader被加载进来，另外的加载器，占位符也就绪了。
 
@@ -206,26 +216,26 @@ void load() {
     // 调用的FilteredPropertrySource的apply方法，可以直接跳到下面
     FilteredPropertySource.apply(this.environment, DEFAULT_PROPERTIES, LOAD_FILTERED_PROPERTY,
                                  (defaultProperties) -> {
-                                     // 初始化各类本地参数
-                                     this.profiles = new LinkedList<>();
-                                     this.processedProfiles = new LinkedList<>();
-                                     this.activatedProfiles = false;
-                                     this.loaded = new LinkedHashMap<>();
-                                     // 初始化profiles
-                                     initializeProfiles();
-                                     // 遍历Profiles并逐个加载
-                                     while (!this.profiles.isEmpty()) {
-                                             Profile profile = this.profiles.poll();
-                                             if (isDefaultProfile(profile)) {
-                                                    addProfileToEnvironment(profile.getName());
-                                             }
-                                             load(profile, this::getPositiveProfileFilter,
-                                                  addToLoaded(MutablePropertySources::addLast, false));
-                                             this.processedProfiles.add(profile);
-                                     }
-                                     load(null, this::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addFirst, true));
-                                     addLoadedPropertySources();
-                                     applyActiveProfiles(defaultProperties);
+                                         // 初始化各类本地参数
+                                         this.profiles = new LinkedList<>();
+                                         this.processedProfiles = new LinkedList<>();
+                                         this.activatedProfiles = false;
+                                         this.loaded = new LinkedHashMap<>();
+                                         // 初始化profiles
+                                         initializeProfiles();
+                                         // 遍历Profiles并逐个加载
+                                         while (!this.profiles.isEmpty()) {
+                                                 Profile profile = this.profiles.poll();
+                                                 if (isDefaultProfile(profile)) {
+                                                        addProfileToEnvironment(profile.getName());
+                                                 }
+                                                 load(profile, this::getPositiveProfileFilter,
+                                                      addToLoaded(MutablePropertySources::addLast, false));
+                                                 this.processedProfiles.add(profile);
+                                         }
+                                         load(null, this::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addFirst, true));
+                                         addLoadedPropertySources();
+                                         applyActiveProfiles(defaultProperties);
                                  });
 }
 
@@ -241,6 +251,7 @@ static void apply(ConfigurableEnvironment environment, String propertySourceName
         // 忘了这是什么可以在SpringApplication#configurePropertySources中看到
 		PropertySource<?> original = propertySources.get(propertySourceName);
     	// 没有额外配置这里就是空的
+    	// 所以第一次会以default进入consumer方法
 		if (original == null) {
                 // accept回跳到上面的内部类
                 operation.accept(null);
@@ -258,11 +269,11 @@ static void apply(ConfigurableEnvironment environment, String propertySourceName
 
 
 
-#### ConfigFileApplicationListener#initializeProfiles - 初始化Profile配置
+#### ConfigFileApplicationListener#initializeProfiles - 整合Profile配置
 
 ```java
 
- public static final String ACTIVE_PROFILES_PROPERTY = "spring.profiles.active";
+public static final String ACTIVE_PROFILES_PROPERTY = "spring.profiles.active";
 public static final String INCLUDE_PROFILES_PROPERTY = "spring.profiles.include";
 
 // ConfigFileApplicationListener#initializeProfiles
@@ -270,7 +281,8 @@ private void initializeProfiles() {
     // 新增一个null
     this.profiles.add(null);
     // 获取全部配置的Profiles
-    Set<Profile> activatedViaProperty = getProfilesFromPxmlroperty(ACTIVE_PROFILES_PROPERTY);
+    // getProfilesFromProperty就是从Environment获取配置的方法
+    Set<Profile> activatedViaProperty = getProfilesFromProperty(ACTIVE_PROFILES_PROPERTY);
     Set<Profile> includedViaProperty = getProfilesFromProperty(INCLUDE_PROFILES_PROPERTY);
     List<Profile> otherActiveProfiles = getOtherActiveProfiles(activatedViaProperty, includedViaProperty);
     this.profiles.addAll(otherActiveProfiles);
