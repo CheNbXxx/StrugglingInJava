@@ -369,9 +369,10 @@ private void interruptIdleWorkers(boolean onlyOne) {
             // task==null时，会从getTask()方法获取下一个任务
             while (task != null || (task = getTask()) != null) {
                 w.lock();
-            	// 触发线程中断的条件
+                // Worker的状态大于STOP的时候必须被中断
                 if ((runStateAtLeast(ctl.get(), STOP) ||
-                     // interrupted()方法不仅仅返回线程的中断状态，还会清除线程的中断标记
+                     // 这里真的太骚了！！！
+                     // 如果或前面的判断为FALSE，会执行到这里将线程的中断清除，然后在判断
                      (Thread.interrupted() &&
                       runStateAtLeast(ctl.get(), STOP))) &&
                     !wt.isInterrupted())
