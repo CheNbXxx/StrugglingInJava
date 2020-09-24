@@ -74,7 +74,7 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
 
 
-## 执行入口
+## 执行入口 - execute
 
 `ThreadPoolExeuctor.execute`就是线程池的核心方法，以一个`Runnable`为入参，向线程池添加任务。
 
@@ -102,11 +102,7 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
 
 
-
-
-
-
-### addWorker - 添加任务到集合
+## 增加一个工作线程 - addWorker
 
 从上文可知addWorker至少有以下三种调用方式:
 
@@ -114,9 +110,12 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 2. addWorker(notnull,false) -> 表示使用非核心线程池运行
 3. addWorker(null,false) -> RUNNING状态下
 
+
+
 ```java
 // firstTask表示希望执行的任务
-// core表示是否以核心线程执行
+// core表示是否是核心线程
+// 返回值表示是否添加成功
 private boolean addWorker(Runnable firstTask, boolean core) {
         retry:
      	// 外层无限循环
@@ -124,11 +123,8 @@ private boolean addWorker(Runnable firstTask, boolean core) {
             int c = ctl.get();
             int rs = runStateOf(c);
 
-            // 下面这个判断语句的放行的情况有
-            // 1. rs为RUNNING，正常运行的线程池肯定自动放行
-            // 2. rs为SHUTDOWN并且firstTask为空并且workQueue不为空
-            // 这个第二个放行条件看的有点奇怪，先过看下面的
-            // 满足以上条件就会退出，表示任务添加失败
+            // 下面这个if会拦截下来的情况
+            // 当前线程池状态为SHUTDOWN或以上 并且 线程状态不为SHUTDOWN或者firstTask不为空或者workQueue为空
             if (rs >= SHUTDOWN &&
                 ! (rs == SHUTDOWN &&
                    firstTask == null &&
@@ -212,6 +208,38 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 
 
 
+**前置检查:**
+
+增加工作线程的前置检查逻辑不复杂，首先检查状态，状态不对直接就退出了。
+
+再来检查当前的线程数，线程数不满足也直接退出了，这里最大的线程数根据入参core来定，如果核心线程则不能超过corePoolSize。
+
+线程数检查通过之后会CAS增加线程数，失败重新检查线程数，成功后需要再次检查线程状态，线程状态改变需要重新检查线程状态。
+
+
+
+**状态判断**:
+
+```java
+ // addWorker的代码片段
+if (rs >= SHUTDOWN &&
+    ! (rs == SHUTDOWN &&
+       firstTask == null &&
+       ! workQueue.isEmpty()))
+```
+
+这里的判断可以理解为一下原则：
+
+1. 线程池在SHUTDOWN或以上的状态时不能添加新任务。
+2. 线程池状态在SHUTDOWN以上的时候不能添加工作线程。
+3. 线程池状态在SHUTDOWN的时候，需要workerQueue不为空的时候才允许添加工作线程。
+
+**firstTask为空的情况，现在猜测是在SHUTDOWN时线程池会添加线程执行workerQueue里积压的任务。**
+
+
+
+### 添加失败收尾 - addWorkerFailed
+
 addWorker失败的收尾逻辑如下:
 
 ```java
@@ -224,7 +252,7 @@ addWorker失败的收尾逻辑如下:
                 workers.remove(w);
             // 减去任务数
             decrementWorkerCount();
-            // 尝试停止
+            // 尝试终止
             tryTerminate();
         } finally {
             mainLock.unlock();
@@ -232,11 +260,92 @@ addWorker失败的收尾逻辑如下:
     }
 ```
 
+从工作线程集合中移除以及减少工作线程数目都是非常好理解的。
 
 
 
+### 尝试关闭线程池 - tryTerminate
 
-## 任务执行
+```java
+    final void tryTerminate() {
+        for (;;) {
+            int c = ctl.get();
+            // 如果线程池状态为RUNNING就直接返回
+            if (isRunning(c) ||
+                // 当前状态为TIDYING或者TERMINATED也退出
+                runStateAtLeast(c, TIDYING) ||
+                // 当前状态为SHUTDOWN并且队列有任务积压也退出
+                (runStateOf(c) == SHUTDOWN && ! workQueue.isEmpty()))
+                return;
+            
+            // 如果当前线程数不为0，就停止空闲的线程
+            if (workerCountOf(c) != 0) { // Eligible to terminate
+                interruptIdleWorkers(ONLY_ONE);
+                return;
+            }
+
+            final ReentrantLock mainLock = this.mainLock;
+            mainLock.lock();
+            try {
+                if (ctl.compareAndSet(c, ctlOf(TIDYING, 0))) {
+                    try {
+                        terminated();
+                    } finally {
+                        ctl.set(ctlOf(TERMINATED, 0));
+                        termination.signalAll();
+                    }
+                    return;
+                }
+            } finally {
+                mainLock.unlock();
+            }
+            // else retry on failed CAS
+        }
+    }
+```
+
+
+
+### 终止空闲线程 - interruptIdleWorkers
+
+```java
+// 入参onlyOne - 只关闭一个线程  
+private void interruptIdleWorkers(boolean onlyOne) {
+        final ReentrantLock mainLock = this.mainLock;
+        mainLock.lock();
+        try {
+            // 遍历工作线程集合
+            for (Worker w : workers) {
+                Thread t = w.thread;
+                // isInterrupted会检查线程是否关闭
+                if (!t.isInterrupted() && w.tryLock()) {
+                    try {
+                        // 中断线程
+                        t.interrupt();
+                    // 非本线程自行中断会进行安全性检查，
+                    // 这里直接忽略了安全性检查失败的异常
+                    } catch (SecurityException ignore) {
+                    } finally {
+                        w.unlock();
+                    }
+                }
+                if (onlyOne)
+                    break;
+            }
+        } finally {
+            mainLock.unlock();
+        }
+    }
+```
+
+中断线程前的判断有以下两个:
+
+1. 线程是否已经被中断(检查线程的中断标志位)
+2. 能都获取到锁(Worker的state是否为0)
+
+
+
+## 开启工作线程 - runWorker
 
 上文说到任务以Runnable形式接收，包装成Worker并添加到workers集合，添加成功开启线程执行任务。
 
@@ -268,9 +377,11 @@ addWorker失败的收尾逻辑如下:
                     !wt.isInterrupted())
                     wt.interrupt();
                 try {
+                    // 这里相当于模板模式，提供给子类实现的方法
                     beforeExecute(wt, task);
                     Throwable thrown = null;
                     try {
+                        // 真正执行Runnable
                         task.run();
                     } catch (RuntimeException x) {
                         thrown = x; throw x;
@@ -279,23 +390,121 @@ addWorker失败的收尾逻辑如下:
                     } catch (Throwable x) {
                         thrown = x; throw new Error(x);
                     } finally {
+                        // 同beforeExecute作用一样
                         afterExecute(task, thrown);
                     }
                 } finally {
+                    // 数据统计
                     task = null;
                     w.completedTasks++;
                     w.unlock();
                 }
             }
+            // 执行到这里的情况就是while里的判断为false，即
+            // task ==null && getTask()又获取不到新任务
             completedAbruptly = false;
         } finally {
+            // Worker退出
             processWorkerExit(w, completedAbruptly);
         }
     }
-
 ```
 
 
 
 
 
+#### Worker退出流程
+
+Worker在执行报错
+
+```java
+    private void processWorkerExit(Worker w, boolean completedAbruptly) {
+        // 这里需要结合runWorker和getTask
+        if (completedAbruptly)
+            decrementWorkerCount();
+
+        final ReentrantLock mainLock = this.mainLock;
+        mainLock.lock();
+        try {
+            completedTaskCount += w.completedTasks;
+            workers.remove(w);
+        } finally {
+            mainLock.unlock();
+        }
+
+        tryTerminate();
+
+        int c = ctl.get();
+        if (runStateLessThan(c, STOP)) {
+            if (!completedAbruptly) {
+                int min = allowCoreThreadTimeOut ? 0 : corePoolSize;
+                if (min == 0 && ! workQueue.isEmpty())
+                    min = 1;
+                if (workerCountOf(c) >= min)
+                    return; // replacement not needed
+            }
+            addWorker(null, false);
+        }
+    }
+```
+
+
+
+
+
+
+
+## 获取任务
+
+```java
+    private Runnable getTask() {
+        boolean timedOut = false; // Did the last poll() time out?
+
+        for (;;) {
+            int c = ctl.get();
+            int rs = runStateOf(c);
+
+            // Check if queue empty only if necessary.
+            if (rs >= SHUTDOWN && (rs >= STOP || workQueue.isEmpty())) {
+                decrementWorkerCount();
+                return null;
+            }
+
+            int wc = workerCountOf(c);
+
+            // Are workers subject to culling?
+            boolean timed = allowCoreThreadTimeOut || wc > corePoolSize;
+
+            if ((wc > maximumPoolSize || (timed && timedOut))
+                && (wc > 1 || workQueue.isEmpty())) {
+                if (compareAndDecrementWorkerCount(c))
+                    return null;
+                continue;
+            }
+
+            try {
+                Runnable r = timed ?
+                    workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
+                    workQueue.take();
+                if (r != null)
+                    return r;
+                timedOut = true;
+            } catch (InterruptedException retry) {
+                timedOut = false;
+            }
+        }
+    
+```
+
+
+
+## 相关问题
+
+
+
+#### 为什么需要对Worker的执行过程上锁 / Worker为什么要继承AQS
+
+以上行为或者结构的原因都是为了中断。
+
+注释中已经说明了，在执行任务期间不允许其他线程中断当前线程，这里可能考虑到每次
