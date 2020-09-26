@@ -1,4 +1,4 @@
-# ThreadPoolExecutor源码解析
+# ThreadPoolExecutor
 
 > ThreadPoolExecutor就是JDK中的线程池实现。
 
@@ -6,15 +6,17 @@
 
 池化技术是重复利用资源，减少创建和删除消耗的一种技术，类似的还有内存池，连接池等概念。
 
-Java中的线程映射了内核中的一个轻量级线程，所以创建和销毁都会带来不小的消耗。
+Java中的线程映射了内核中的一个轻量级线程，所以创建和销毁都需要切换到内核态，都会带来不小的消耗。
 
-以一个线程池的概念，生成多个线程重复利用，就是该类对性能优化的的核心思想。
+以一个线程池的概念，生成并持有多个线程对象，重复利用，就是该类对性能优化的的核心思想。
+
+在日常开发过程中免不了会与线程池打交道，知晓点源码说不定还能帮我们快速定位线上问题。
 
 
 
+## 源码解析
 
-
-## 构造函数
+### 构造函数
 
 这个基本是面试都会问的问题了吧，非常重要，因为设定不同的入参使我们控制线程池执行方式的唯一方法了。
 
@@ -36,11 +38,11 @@ Java中的线程映射了内核中的一个轻量级线程，所以创建和销�
 
 
 
-## ctl 线程池状态和线程数
+### ctl 线程池状态和线程数
 
-这里是JDK的线程池中一个非常亮眼的设计，以ctl一个32位整型表示了两个线程池参数。
+这里是ThreadPoolExecutor中一个非常亮眼的设计，以一个32位整型表示了两个线程池参数。
 
-这么设计的意义就是使线程池的状态和线程数的设置可以同时进行，保证彼此的关联性
+这样的设计使线程池的状态和线程数的设置可以同时进行，保证彼此的关联性，而且位运算的效率也不错。
 
 
 
@@ -48,7 +50,7 @@ Java中的线程映射了内核中的一个轻量级线程，所以创建和销�
 
 
 
-如上图所示，ctl以一个AtomicInteger类型表示，高3位表示当前线程池的状态，低29位表示线程的数目。
+如上图所示，ctl是一个AtomicInteger类型的对象，高3位表示当前线程池的状态，低29位表示线程的数目。
 
 COUNT_BITS是表示线程数目的位数，也就是29位，这里也可以看出来，线程池的线程上限就是2^29个。
 
@@ -76,13 +78,53 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
 以上状态非常关键，因为不论是添加任务，执行任务，都需要先检查线程池的状态。
 
+<img src="https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/未命名文件 (4).png" style="zoom:50%;" />
 
 
-## 添加任务入口 - execute
 
-`execute()`就是向线程池提交任务的方法，以一个`Runnable`为入参。
+### 其他相关组件对象
 
-以下差不多就是`execute()`方法的全部代码:
+#### Worker
+
+Worker是ThreadPoolExecutor的内部类，同时也是**线程池中具体的工作线程的持有者。**
+
+线程池中的所有工作线程都保存在以下的成员变量中:
+
+ ![image-20200926222616980](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200926222616980.png)
+
+
+
+Worker作为ThreadPoolExecutor的内部类，自身继承了AbstractQueuedSynchronizer，并实现了Runnable接口。
+
+以下是Worker中的内部变量:
+
+ ![image-20200926222820062](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200926222820062.png)
+
+除了具体的工作线程Thread外，还有初始任务以及完成的任务计数。
+
+其实Worker本身就是一个Runnable，交由thread来执行，但是它本身又包含了另外需要执行的Runnable，也就是firstTask(这里好像有点乱)</font>。
+
+在添加工作线程的时候可以选择一起添加初始任务(addWorker(runnable,boolean))，那么在runWorker中就会先执行firstTask而不是直接去getTask。
+
+**而没有firstTask则表示是直接添加工作线程消费阻塞队列中的任务。(addWorker(null,boolean))**
+
+
+
+下面是Worker中有关于AQS的方法实现:
+
+ ![image-20200926225406590](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200926225406590.png)
+
+可以看到这里的上锁和解锁就是state在0,1之间的变化。
+
+
+
+### 添加任务入口 - execute
+
+该方法用于向线程池添加新的任务，是ThreadPoolExecutor中最上层的方法。
+
+
+
+方法源码如下:
 
  ![image-20200922221155365](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200922221155365.png)
 
@@ -90,19 +132,25 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
 **第一步获取ctl变量,判断是否可以使用核心线程池**，如果线程池的工作线程数量小于**corePoolSize**，就直接调用addWorker方法添加任务，执行成功就直接return。
 
-添加失败或者当前线程数已经大于**corePoolSize**就开启第二步。
+添加失败或者当前线程数已经大于**corePoolSize**则进入第二步。
 
 **第二步判断当前线程池是否为RUNNING状态**，如果是则尝试将任务添加到工作队列。
 
-这里我个人一致有一个理解上的误区，最开始以为再超过corePoolSize之后会继续增加线程到maximumPoolSize，才放入workQueue。
+<font size=2>(这里我个人一直有一个理解上的误区，最开始以为再超过corePoolSize之后会继续增加线程到maximumPoolSize，才放入workQueue)</font>
 
-添加到workQueue成功之后还会再次检查当前线程池的状态，**如果状态不为RUNNING，则移除当前任务，并执行拒绝逻辑。**
+任务添加到workQueue成功之后还会再次检查当前线程池的状态，**如果状态不为RUNNING，则移除当前任务，并执行拒绝逻辑。**
 
-如果状态为RUNNING或者删除任务失败，则调用`addWorker(null,false)`，添加一个不携带`firstTask`的线程执行队列中的任务。(这里可以看`runWorker()`方法，在`firstTask`为空时会getTask从队列中获取任务)
+如果状态为RUNNING或者移除任务失败，那么可能迫于无奈的尝试去执行入队的任务，此时会去检查线程池中线程的数目，
 
-**第三步则是线程不是RUNNING状态或者入工作队列失败的情况下**，重新尝试添加任务，以非核心线程池运行，
+当线程数目为0时添加一个不带初始任务的非核心线程去消费阻塞队列中的任务。
 
-失败则直接执行拒绝逻辑。
+**第三步是线程不是RUNNING或者入队列失败的情况，**会直接调用addWorker尝试以非核心线程执行当前任务，如果还失败则执行拒绝策略。
+
+addWorker中也会前置检查，比如当前线程为SHUTDOWN但是因为firstTask不为空，所以会直接返回false，然后执行拒绝策略。
+
+
+
+另外的方法中在offer到阻塞队列的前后都会对线程池的状态进行判断。
 
 
 
@@ -110,18 +158,13 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
  <img src="https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/未命名文件 (3).png" style="zoom:57%;" />
 
-
-
-添加任务存在以下的结果:
-
-1. 新建线程执行新任务
-2. 任务被丢进阻塞队列等待执行
-3. 以非核心线程执行新任务
-4. 直接被线程池拒绝
+以上就是线程池添加新任务最外层的逻辑，可能也是面试问的最多的地方吧。
 
 
 
-## 添加任务 - addWorker
+
+
+### 添加任务 - addWorker
 
 addWorker方法就是希望添加一个新的工作线程到线程池中。
 
@@ -224,13 +267,13 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 
 添加任务的整个逻辑并不复杂，不过有多次的状态检查。
 
-前置检查之后会把会把**入参Runnable包装为Worker对象，然后使用Thread对象执行。**
+前置检查之后会把会把**入参Runnable包装为Worker对象，然后交给Thread对象执行。**
 
 
 
 **前置检查:**
 
-增加工作线程的前置检查逻辑不复杂，首先检查状态，状态不对直接就退出了。
+增加工作线程的前置检查就更简单了，首先检查状态，状态不对直接就退出了。
 
 再来检查当前的线程数，线程数不满足也直接退出了，这里最大的线程数根据入参core来定，如果增加的是核心线程则不能超过corePoolSize。
 
@@ -240,16 +283,18 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 
 通过前置检查可以确定下面两个情况:
 
-1. 添加工作线程的时机，只能在线程池状态为RUNNING或者SHUTDOWN但是工作线程不为空的情况下。
-2. 线程数永远不能大于maximumPoolSize，入参core仅仅作为要求，如果为false可能添加后的线程数目还不到corePoolSize。
+1. 添加工作线程的时机，**只能在线程池状态为RUNNING或者SHUTDOWN但工作线程不为空的情况下。**
+2. **线程数永远不能大于maximumPoolSize**，入参core其实仅仅作为要求，如果为false可能添加后的线程数目还不到corePoolSize。
 
 
 
+对于workers集合来说，它保存的是已经创建的Worker对象，而在executor方法中，workerQueue中保存的是未包装的Runnable对象。
 
 
-### 添加失败收尾 - addWorkerFailed
 
-addWorker失败的收尾逻辑如下:
+#### 添加失败收尾 - addWorkerFailed
+
+该方法在addWorker失败之后调用，比如添加失败或者启动失败等原因。
 
 ```java
    private void addWorkerFailed(Worker w) {
@@ -271,17 +316,23 @@ addWorker失败的收尾逻辑如下:
 
 从工作线程集合中移除以及减少工作线程数目都是非常好理解的。
 
+另外的添加Worker失败之后还会调用tryTerminate来检查线程池的状态，判断线程池是否应该terminate。
 
 
-## 开启工作线程 - runWorker
+
+### 开启工作线程 - runWorker
 
 上文说到任务以Runnable形式接收，包装成Worker并添加到workers集合，添加成功开启线程执行任务。
 
+以下就是worker的run方法，也就是工作线程执行逻辑入口：
+
  ![image-20200923071519311](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200923071519311.png)
 
-上图就是Worker的run方法，直接调用的**ThreadPoolExecutor.runWorker()**来执行当前任务。
+很干脆的只有调用`runWorker`方法。
 
-以下就是runWorker的全部源码.
+
+
+以下就是runWorker()方法的全部源码.
 
 ```java
     final void runWorker(Worker w) {
@@ -326,7 +377,7 @@ addWorker失败的收尾逻辑如下:
                         afterExecute(task, thrown);
                     }
                 } finally {
-                    // 数据统计
+                    // 这里把Task置空，保证任务只被执行一次
                     task = null;
                     w.completedTasks++;
                     w.unlock();
@@ -342,20 +393,38 @@ addWorker失败的收尾逻辑如下:
     }
 ```
 
-整个`runWorker()`方法可以看做一个大的while循环。
+整个`runWorker()`方法可以看做一个大的while循环，所以是由while中的条件来控制线程的生命周期。
 
-首次调用会执行firstTask，如果firstTask为空那么会调用getTask获取阻塞队列中的任务。
 
-另外就是循环中对while的处理，保证了以下两个关键点:
+
+**首次调用会执行firstTask，如果firstTask为空那么会调用getTask获取阻塞队列中的任务。**
+
+接下来就是while循环中对线程状态的判断，保证了以下两个关键点:
 
 1. 线程池在STOP的状态下，当前线程必须中断。
 2. 如果线程池不在STOP状态，那么线程就不能被中断，正式执行Runnable之前就需要清除中断状态。
+
+现成的执行前后有`beforeExecute`以及`afterExecute`两个钩子方法，这两个是模板方法，子类可以实现以复制或增强线程池任务执行。
 
 还有就是知道了每个Worker都会记录执行完成的任务数。
 
 
 
+整个任务执行流程中值得关注的就是Worker对中断的处理。
 
+**第一个确保的就是具体的任务执行期间是不允许中断的。**
+
+**另外的保证就是只有STOP状态下，工作线程才会在获取到任务的状态下主动退出。**
+
+
+
+**另一个值得关注的点是锁问题，为什么单线程执行需要w.lock()方法上锁。**
+
+这个其实也和中断有关，在`interruptIdleWorkers`方法中可以看到，线程池中对于空闲的定义就是可以获取到锁，所以这里的上锁也就表明当前工作线程正忙。
+
+
+
+如果firstTask为空并且getTask也没有获取到任务(不一定是阻塞队列为空)，那么工作线程就会进入退出流程。
 
 #### Worker退出流程
 
@@ -413,9 +482,13 @@ private void processWorkerExit(Worker w, boolean completedAbruptly) {
 
 
 
-## 获取任务 - getTask()
 
-从阻塞队列获取任务的方法，不过
+
+### 获取任务 - getTask
+
+该方法从名字来看就是获取任务的方法，准确来说是**从阻塞队列获取任务**的方法。
+
+但其中还包含了**对线程池状态的检测，以及对线程生命周期的控制**，这里的控制指的是getTask如果返回null，那么`runWorker`中的while循环就退出了。
 
 ```java
     private Runnable getTask() {
@@ -467,13 +540,15 @@ private void processWorkerExit(Worker w, boolean completedAbruptly) {
 
 
 
-获取任务的流程如下:
+获取任务的流程简述如下:
 
-首选检查当前线程池状态是否允许获取，只有RUNNING以及SHUTDOWN的状态才允许获取任务。
+首选检查当前线程池状态是否允许获取，只有RUNNING以及SHUTDOWN的状态才允许获取任务，所以例如STOP或者更高的状态下`getTask`就会获取不到线程，从而导致工作线程的退出。
 
 再来会检查当前的线程是否需要淘汰，最后才会获取任务。
 
-工作线程的淘汰实际上就是由`getTask()`方法控制的，淘汰的场景如下:
+
+
+工作线程的淘汰的场景如下:
 
 1. 工作线程数直接大于maximumPoolSize
 2. 工作线程大于corePoolSize并且获取任务超时过一次
@@ -483,9 +558,11 @@ private void processWorkerExit(Worker w, boolean completedAbruptly) {
 
 
 
-## 尝试终止 - tryTerminate
+### 尝试终止 - tryTerminate
 
-检查是否应该将当前线程池转化为Terminate状态。
+该方法在类中很多地方都会调用,比如addWorker失败，worker线程退出等等情况。
+
+相当于一个后置的检查方法，检查线程池应不应该进入TERMINATE状态，在可终止但是仍有线程在运行的情况下，尝试中断空闲线程。
 
 ```java
     final void tryTerminate() {
@@ -526,19 +603,24 @@ private void processWorkerExit(Worker w, boolean completedAbruptly) {
     }
 ```
 
-该方法可以看做是对线程池的后置检查。
+通过第一个对于线程池状态的判断，我们可以得出以下关于转化为TERMINATED状态的要求:
 
-对于RUNNING，TIDYING，TERMINATED等状态都不需要处理，SHUTDOWN状态只有在工作线程为空时才会处理。
+1. 线程池为STOP状态
+2. 线程池为SHUTDOWN状态，但是workerQueue(阻塞队列)必须为空
 
-处理的方式就是每次调用都会最多关闭一个工作的线程。
 
-如果当前工作的线程为0，则设置为TIDYING状态，并调用terminated()方法，不难看出，TIDYING是一个过渡状态。
+
+满足前面两个要求的线程池，调用该方法之后如果工作线程不为0，则尝试关闭空闲线程，
+
+如果工作线程为0，则转化为TERMINATED状态。
 
 
 
  
 
-## 中断空闲线程 - interruptIdleWorkers
+### 中断空闲线程 - interruptIdleWorkers
+
+该方法用来中断线程池中空闲的线程。
 
 ```java
 // 入参onlyOne - 只关闭一个线程  
@@ -572,27 +654,23 @@ private void interruptIdleWorkers(boolean onlyOne) {
     }
 ```
 
-
-
-首先明确**`tryLock`就是验证线程是否空闲的方法,**对于空闲的定义就是线程没有在执行任何一个任务。
-
-在调用线程的`interrupt()`方法之前，会调用Woker的`tryLock()`方法，下面是`tryLock()`系列的代码:
-
- ![image-20200924230039392](/home/chen/Pictures/image-20200924230039392.png)
-
-`tryAcquire()`方法就是CAS把State从0变成1，且只会尝试一次，所以`tryAcquire()`只有state为0的时候才会成功。
-
-因此此处的中断也就只有在Worker的state为0时才会发生，这也就是下面将说到使用state保证线程不会在执行任务期间被中断。
+整体的方法逻辑就是遍历整个workers集合，调用`tryLock`方法尝试获取锁，成功就触发中断。
 
 
 
-**再次强调在线程池中的线程还在执行任务时，是无法被中断的，因为`tryLock`方法会失败。**
+根据源码不难推断**`tryLock`就是验证线程是否空闲的方法**，在调用`interrupt()`方法之前，都会调用Woker的`tryLock()`方法。
+
+结合[Worker的源码](#Worker)发现，`tryLock()`实际就是调用`tryAcqurire`方法，而`tryAcquire()`方法就是尝试CAS把state从0变成1，且只会尝试一是次，所以`tryLock()`只有state=0的时候才会成功，也就顺理成章的推断**state=0即表示线程空闲**。
+
+所以也就验证了上文中提到的，AQS的state属性在这里就表示当前线程是否空闲。
 
 
 
+**这里再次强调在线程池中的线程还在执行任务时，是无法被中断的，因为`tryLock`方法会失败。**
 
 
-## 线程池关闭
+
+### 线程池关闭 - shutdown/shutdownNow
 
 ThreadPoolExecutor中有很多种关闭线程的方式。
 
@@ -600,13 +678,13 @@ ThreadPoolExecutor中有很多种关闭线程的方式。
 
 以下是强制关闭的方法 `shutdownNow()`:
 
- ![image-20200925170630479](../../../pic/image-20200925170630479.png)
+ ![image-20200925170630479](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200925170630479.png)
 
 该方法通过将线程池的状态置为STOP来关闭线程池，并且会中断所有的线程，最后返回阻塞队列中的任务，但是不包含正在执行的任务。
 
 `interruptWorkers()`方法会遍历调用Worker的`interruptIfStarted()`方法。
 
- ![image-20200925171236897](../../../pic/image-20200925171236897.png)
+ ![image-20200925171236897](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200925171236897.png)
 
 第一个```getState() >= 0```的条件会过滤掉刚创建并没有调用`runWorker()`的线程。
 
@@ -618,24 +696,8 @@ drainQueue()会返回所有阻塞队列中的任务。
 
 以下差不多是优雅关闭的方法`shutdown()`
 
- ![image-20200925170649962](../../../pic/image-20200925170649962.png)
+ ![image-20200925170649962](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200925170649962.png)
 
-相同的检查之外，不同的是将状态变为
-
-## 相关总结
+相同的检查之外，不同的是将状态变为SHUTDOWN。
 
 
-
-### 为什么需要对Worker的执行过程上锁 / Worker为什么要继承AQS
-
-以上行为或者结构的原因都是为了中断，AQS中的state也可以说是**是否可中断的标志位**。
-
-以下是`runWorker()`方法之前的注释:
-
- ![image-20200924222044904](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200924222044904.png)
-
-**在执行任何任务之前先获取锁，防止其他线程在任务执行期间发起中断，**
-
-**之后保证除非线程池停止了，否则该线程都没办法被设置中夺冠。**
-
-其中Worker的state的标志位初始化的时候被置为-1，而在runWorker方法执行最初会调用unlock将state置为0。
