@@ -18,29 +18,37 @@ Java中的线程映射了内核中的一个轻量级线程，所以创建和销�
 
 ### 构造函数
 
-这个基本是面试都会问的问题了吧，非常重要，因为设定不同的入参使我们控制线程池执行方式的唯一方法了。
+这个基本是面试都会问的问题了吧，非常重要，因为设定不同的入参是我们控制线程池执行方式的最主要的方法。
 
  ![image-20200922220330699](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200922220330699.png)
 
 以上就是ThreadPoolExecutor类内所有的构造函数。
 
+以下是参数最完整的一个:
+
+ ![image-20200927210322840](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200927210322840.png)
+
 参数的含义如下:
 
-| 参数名          | 含义             |
-| --------------- | ---------------- |
-| corePoolSize    | 核心池的线程数量 |
-| maximumPoolSize | 最大线程数量     |
-| keepAliveTime   | 线程保活时间     |
-| TimeUnit        | 保活的时间单位   |
-| workQueue       | 工作队列         |
-| threadFactory   | 线程工厂         |
-| handler         | 拒绝策略         |
+| 参数名          | 含义                   |
+| --------------- | ---------------------- |
+| corePoolSize    | 核心池的线程数量       |
+| maximumPoolSize | 最大线程数量           |
+| keepAliveTime   | 空闲线程保活时间       |
+| TimeUnit        | 空闲线程保活的时间单位 |
+| workQueue       | 等待队列               |
+| threadFactory   | 线程工厂               |
+| handler         | 拒绝策略               |
+
+
+
+
 
 
 
 ### ctl 线程池状态和线程数
 
-这里是ThreadPoolExecutor中一个非常亮眼的设计，以一个32位整型表示了两个线程池参数。
+这里是ThreadPoolExecutor中一个非常亮眼的设计，**以一个32位整型表示了两个线程池参数。**
 
 这样的设计使线程池的状态和线程数的设置可以同时进行，保证彼此的关联性，而且位运算的效率也不错。
 
@@ -50,7 +58,7 @@ Java中的线程映射了内核中的一个轻量级线程，所以创建和销�
 
 
 
-如上图所示，ctl是一个AtomicInteger类型的对象，高3位表示当前线程池的状态，低29位表示线程的数目。
+如上图所示，**ctl是一个AtomicInteger类型的对象，高3位表示当前线程池的状态，低29位表示线程的数目。**
 
 COUNT_BITS是表示线程数目的位数，也就是29位，这里也可以看出来，线程池的线程上限就是2^29个。
 
@@ -60,7 +68,7 @@ CAPACITY表示线程的数目上线，也用于求线程数以及线程状态，
 
 
 
-再下面就是线程池的状态了:
+接下来看线程池的状态:
 
  ![image-20200924233552756](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200924233552756.png)
 
@@ -102,11 +110,11 @@ Worker作为ThreadPoolExecutor的内部类，自身继承了AbstractQueuedSynchr
 
 除了具体的工作线程Thread外，还有初始任务以及完成的任务计数。
 
-其实Worker本身就是一个Runnable，交由thread来执行，但是它本身又包含了另外需要执行的Runnable，也就是firstTask(这里好像有点乱)</font>。
+其实Worker本身就是一个Runnable，交由thread来执行，但是它本身又包含了另外需要执行的Runnable，也就是firstTask<font size=2>(这里好像有点乱)</font>。
 
 在添加工作线程的时候可以选择一起添加初始任务(addWorker(runnable,boolean))，那么在runWorker中就会先执行firstTask而不是直接去getTask。
 
-**而没有firstTask则表示是直接添加工作线程消费阻塞队列中的任务。(addWorker(null,boolean))**
+**没有firstTask的调用则表示是直接添加工作线程消费阻塞队列中的任务。(addWorker(null,boolean))**
 
 
 
@@ -115,6 +123,10 @@ Worker作为ThreadPoolExecutor的内部类，自身继承了AbstractQueuedSynchr
  ![image-20200926225406590](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200926225406590.png)
 
 可以看到这里的上锁和解锁就是state在0,1之间的变化。
+
+因为本身就是单线程工作所以也不存在竞争的问题，**这里的上锁的更像是表示线程的忙碌标志。**
+
+下文会看到runWorker中在执行某个具体的任务之前都会先上锁，也就表示了线程正在执行一个任务，在忙碌状态。
 
 
 
@@ -159,6 +171,13 @@ addWorker中也会前置检查，比如当前线程为SHUTDOWN但是因为firstT
  <img src="https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/未命名文件 (3).png" style="zoom:57%;" />
 
 以上就是线程池添加新任务最外层的逻辑，可能也是面试问的最多的地方吧。
+
+添加的任务最终有以下几个去向：
+
+1. 被拒绝策略拒绝
+2. 被放入阻塞队列
+3. 直接开启新的核心线程执行
+4. 入队失败后尝试开启非核心线程执行
 
 
 
@@ -284,11 +303,11 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 通过前置检查可以确定下面两个情况:
 
 1. 添加工作线程的时机，**只能在线程池状态为RUNNING或者SHUTDOWN但工作线程不为空的情况下。**
-2. **线程数永远不能大于maximumPoolSize**，入参core其实仅仅作为要求，如果为false可能添加后的线程数目还不到corePoolSize。
+2. **线程数永远不能大于maximumPoolSize**
 
 
 
-对于workers集合来说，它保存的是已经创建的Worker对象，而在executor方法中，workerQueue中保存的是未包装的Runnable对象。
+对于workers集合来说，它保存的是已经创建的Worker对象，而在executor方法中的workerQueue中保存的是未包装的Runnable对象。
 
 
 
@@ -694,10 +713,12 @@ drainQueue()会返回所有阻塞队列中的任务。
 
 
 
-以下差不多是优雅关闭的方法`shutdown()`
+以下算是优雅关闭的方法`shutdown()`
 
  ![image-20200925170649962](https://chenqwwq-img.oss-cn-beijing.aliyuncs.com/img/image-20200925170649962.png)
 
 相同的检查之外，不同的是将状态变为SHUTDOWN。
+
+SHUTDOWN状态下的线程并不会直接关闭而是会继续消费阻塞队列中的任务，此时只会关闭空闲线程，执行中的线程即使你把它中断了，它也会重置中断标记位。
 
 
