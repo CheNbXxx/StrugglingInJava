@@ -30,23 +30,25 @@ JDK基础以及其他计算机基础笔记
 
 
 
-#### JDK源码阅读
+#### JDK相关源码
+
+
 
 ##### JUC（java.util.concurrent）
 
-[抽象同步框架-AbstractQueuedSynchronizer源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/AbstractQueuedSynchronizer.md)
+[抽象同步队列 - AbstractQueuedSynchronizer源码阅读](./note/jdk/JUC/AbstractQueuedSynchronizer.md)
 
-[同步屏障-CyclicBarrier源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/CyclicBarrier.md)
+[同步屏障 - CyclicBarrier源码阅读](./note/jdk/JUC/CyclicBarrier.md)
 
-[计数器-CountDownLatch源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/CountDownLatch.md)
+[计数器 - CountDownLatch源码阅读](./note/jdk/JUC/CountDownLatch.md)
 
-[信号量-Semaphore源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/Semaphore.md)
+[信号量 - Semaphore源码阅读](./note/jdk/JUC/Semaphore.md)
 
-[重入锁-ReetrantLock源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/ReetrantLock.md)
+[重入锁 - ReetrantLock源码阅读](./note/jdk/JUC/ReetrantLock.md)
 
-[线程池构造方法参数整理](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/ThreadPool.md)
+[线程池 - ThreadPoolExecutor源码阅读 ](./note/jdk/JUC/ThreadPoolExecutor源码解析.md)
 
-[ConcurrentHashMap源码阅读](https://github.com/CheNbXxx/StrugglingInJava/blob/master/note/ConcurrentHashMap源码阅读(jdk1.8).md)
+[并发HashMap - ConcurrentHashMap源码阅读](./note/jdk/JUC/ConcurrentHashMap源码阅读(jdk1.8).md)
 
 ##### 集合框架（Collection）
 
